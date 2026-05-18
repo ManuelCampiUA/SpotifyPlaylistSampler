@@ -1,0 +1,165 @@
+<div class="page-wrapper">
+  <!-- HERO SECTION -->
+  <header class="hero">
+    <div class="hero__icon">
+      <mat-icon>library_music</mat-icon>
+    </div>
+    <h1 class="hero__title">Playlist Sampler</h1>
+    <p class="hero__subtitle">
+      Incolla il link di una tua playlist Spotify pubblica per ottenere la lista dei brani e i
+      generi musicali presenti.
+    </p>
+  </header>
+
+  <!-- INPUT CARD -->
+  <mat-card class="input-card" appearance="outlined">
+    <mat-card-content>
+      <div class="input-row">
+        <mat-form-field class="url-field" appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Link della playlist Spotify</mat-label>
+          <mat-icon matPrefix>link</mat-icon>
+          <input
+            matInput
+            type="url"
+            placeholder="https://open.spotify.com/playlist/..."
+            [value]="urlInput()"
+            (input)="urlInput.set($any($event.target).value)"
+            (keydown)="onKeyDown($event)"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          @if (urlInput()) {
+            <button
+              mat-icon-button
+              matSuffix
+              (click)="urlInput.set('')"
+              matTooltip="Cancella"
+              aria-label="Cancella URL"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          class="analyze-btn"
+          [disabled]="!isValidUrl() || isLoading()"
+          (click)="analyze()"
+        >
+          <mat-icon [class.spinning]="isLoading()">
+            {{ isLoading() ? 'sync' : 'search' }}
+          </mat-icon>
+          {{ isLoading() ? 'Analisi...' : 'Analizza' }}
+        </button>
+      </div>
+
+      @if (urlInput() && !isValidUrl()) {
+        <p class="url-hint">
+          <mat-icon>info</mat-icon>
+          Inserisci un link valido del tipo <code>open.spotify.com/playlist/...</code>
+        </p>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- PROGRESS BAR -->
+  @if (isLoading()) {
+    <mat-progress-bar mode="indeterminate" class="progress-bar" />
+  }
+
+  <!-- ERROR STATE -->
+  @if (hasError()) {
+    <mat-card class="error-card" appearance="outlined">
+      <mat-card-content class="error-content">
+        <mat-icon>error_outline</mat-icon>
+        <div>
+          <strong>Errore</strong>
+          <p>{{ errorMessage() }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- RESULTS -->
+  @if (result(); as data) {
+    <div class="results-wrapper">
+      <!-- PLAYLIST HEADER -->
+      <div class="playlist-header">
+        @if (data.imageUrl) {
+          <img [src]="data.imageUrl" alt="Copertina playlist" class="playlist-cover" />
+        }
+        <div class="playlist-meta">
+          <span class="playlist-label">Playlist</span>
+          <h2 class="playlist-name">{{ data.playlistName }}</h2>
+          @if (data.description) {
+            <p class="playlist-description">{{ data.description }}</p>
+          }
+          <span class="playlist-count">
+            <mat-icon>queue_music</mat-icon>
+            {{ data.totalTracks }} brani
+          </span>
+        </div>
+      </div>
+
+      <div class="results-grid">
+        <!-- TRACKS CARD -->
+        <mat-card class="tracks-card" appearance="outlined">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>music_note</mat-icon>
+            <mat-card-title>Brani</mat-card-title>
+            <mat-card-subtitle>{{ data.tracks.length }} tracce</mat-card-subtitle>
+          </mat-card-header>
+          <mat-divider />
+          <mat-card-content class="tracks-content">
+            <mat-list>
+              @for (track of data.tracks; track track.name; let i = $index) {
+                <mat-list-item class="track-item">
+                  <span matListItemMeta class="track-index">{{ i + 1 }}</span>
+                  <span matListItemTitle class="track-title">{{ track.name }}</span>
+                  <span matListItemLine class="track-artists">
+                    {{ track.artists.join(', ') }}
+                  </span>
+                  @if (track.durationMs) {
+                    <span matListItemMeta class="track-duration">
+                      {{ formatDuration(track.durationMs) }}
+                    </span>
+                  }
+                </mat-list-item>
+                @if (!$last) {
+                  <mat-divider />
+                }
+              }
+            </mat-list>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- GENRES CARD -->
+        <mat-card class="genres-card" appearance="outlined">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>label</mat-icon>
+            <mat-card-title>Generi</mat-card-title>
+            <mat-card-subtitle>{{ data.genres.length }} generi trovati</mat-card-subtitle>
+          </mat-card-header>
+          <mat-divider />
+          <mat-card-content class="genres-content">
+            <mat-chip-set aria-label="Generi musicali">
+              @for (genre of data.genres; track genre) {
+                <mat-chip>{{ genre }}</mat-chip>
+              }
+            </mat-chip-set>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- RAW JSON COLLAPSIBLE -->
+      <details class="raw-json">
+        <summary>
+          <mat-icon>data_object</mat-icon>
+          Risposta JSON grezza
+        </summary>
+        <pre>{{ data | json }}</pre>
+      </details>
+    </div>
+  }
+</div>

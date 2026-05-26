@@ -1,0 +1,29 @@
+using Backend.Application.DTOs;
+using Backend.Application.Services;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Backend.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class PlaylistController(PlaylistAnalyzerService analyzerService) : ControllerBase
+{
+    [HttpPost("analyze")]
+    public async Task<ActionResult<PlaylistResultDto>> Analyze(
+        [FromBody] AnalyzeRequestDto request,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.Url))
+            return BadRequest("L'URL della playlist non può essere vuoto.");
+
+        try
+        {
+            var result = await analyzerService.AnalyzeAsync(request.Url, ct);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+}

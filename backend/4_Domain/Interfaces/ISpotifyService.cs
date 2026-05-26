@@ -1,6 +1,6 @@
-using Backend.Application.DTOs;
+using backend.Business.DTOs;
 
-namespace Backend.Application.Interfaces;
+namespace backend.Domain.Interfaces;
 
 public interface ISpotifyService
 {

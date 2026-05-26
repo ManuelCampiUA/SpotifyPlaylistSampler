@@ -1,9 +1,9 @@
-using Backend.Application.DTOs;
-using Backend.Application.Interfaces;
+using backend.Business.DTOs;
+using backend.Domain.Interfaces;
 using Microsoft.Extensions.Options;
 using SpotifyAPI.Web;
 
-namespace Backend.Infrastructure.Spotify;
+namespace backend.Infrastructure.Spotify;
 
 public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
 {
@@ -15,7 +15,7 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
         var playlist = await client.Playlists.Get(playlistId);
 
         // 2. Paginate through ALL tracks (handles playlists > 100 items)
-        var allItems = await client.PaginateAll(playlist.Tracks!);
+        var allItems = await client.PaginateAll(playlist.Items!);
 
         var tracks = allItems
             .Select(item => item.Track)
@@ -30,15 +30,16 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
             .Distinct()
             .ToList();
 
-        // 4. Fetch full artist details in batches of 50 (Spotify API limit)
+        // 4. Fetch full artist details individually (batch endpoint removed by Spotify).
+        //    Tasks run concurrently, capped at 10 parallel requests to respect rate limits.
         var fullArtists = new List<FullArtist>();
-        foreach (var batch in artistIds.Chunk(50))
+        foreach (var batch in artistIds.Chunk(10))
         {
-            var response = await client.Artists.GetSeveral(new ArtistsRequest([.. batch]));
-            fullArtists.AddRange(response.Artists.Where(a => a is not null));
+            var tasks = batch.Select(id => client.Artists.Get(id, ct));
+            var results = await Task.WhenAll(tasks);
+            fullArtists.AddRange(results.Where(a => a is not null));
         }
 
-        var artistMap = fullArtists.ToDictionary(a => a.Id, a => a);
 
         // 5. Collect all unique genres across the entire playlist
         var allGenres = fullArtists

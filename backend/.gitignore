@@ -7,11 +7,15 @@
 /bazel-out
 /bin
 /obj
+/backend.slnx
 
 # Node
 /node_modules
 npm-debug.log
 yarn-error.log
+
+# Visual Studio
+.vs/
 
 # IDEs and editors
 .idea/

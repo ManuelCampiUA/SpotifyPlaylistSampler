@@ -1,8 +1,7 @@
-using backend.Business.Interfaces;
-using Backend.Application.Interfaces;
-using Backend.Application.Services;
-using Backend.Infrastructure.Persistence;
-using Backend.Infrastructure.Spotify;
+using backend.Business.Services;
+using backend.Domain.Interfaces;
+using backend.Infrastructure.Persistence;
+using backend.Infrastructure.Spotify;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);

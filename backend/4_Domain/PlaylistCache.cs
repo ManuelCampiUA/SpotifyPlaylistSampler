@@ -1,4 +1,4 @@
-namespace backend.Business.Entities;
+namespace backend.Domain;
 
 /// <summary>
 /// Cached Spotify playlist analysis result.

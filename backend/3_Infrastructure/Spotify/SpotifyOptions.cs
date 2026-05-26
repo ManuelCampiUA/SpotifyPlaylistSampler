@@ -1,4 +1,4 @@
-namespace Backend.Infrastructure.Spotify;
+namespace backend.Infrastructure.Spotify;
 
 public class SpotifyOptions
 {

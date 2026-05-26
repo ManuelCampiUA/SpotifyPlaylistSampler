@@ -1,11 +1,10 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using backend.Business.Entities;
-using backend.Business.Interfaces;
-using Backend.Application.DTOs;
-using Backend.Application.Interfaces;
+using backend.Domain;
+using backend.Domain.Interfaces;
+using backend.Business.DTOs;
 
-namespace Backend.Application.Services;
+namespace backend.Business.Services;
 
 public partial class PlaylistAnalyzerService(
     ISpotifyService spotifyService,

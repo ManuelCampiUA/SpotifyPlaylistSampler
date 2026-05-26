@@ -1,4 +1,4 @@
-namespace Backend.Application.DTOs;
+namespace backend.Business.DTOs;
 
 /// <summary>
 /// Full analysis result returned to the frontend.

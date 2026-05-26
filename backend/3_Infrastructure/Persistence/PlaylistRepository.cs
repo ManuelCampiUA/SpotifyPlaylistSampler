@@ -1,8 +1,8 @@
-using backend.Business.Entities;
-using backend.Business.Interfaces;
+using backend.Domain;
+using backend.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace Backend.Infrastructure.Persistence;
+namespace backend.Infrastructure.Persistence;
 
 public class PlaylistRepository(AppDbContext db) : IPlaylistRepository
 {

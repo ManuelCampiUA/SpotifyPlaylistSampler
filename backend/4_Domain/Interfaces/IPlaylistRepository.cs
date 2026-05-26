@@ -1,6 +1,6 @@
-using backend.Business.Entities;
+using backend.Domain;
 
-namespace backend.Business.Interfaces;
+namespace backend.Domain.Interfaces;
 
 public interface IPlaylistRepository
 {

@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "Bt4hRpClajU=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\B738NP\\OneDrive - AXA\\Desktop\\SpotifyPlaylistSampler\\backend\\backend.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\B738NP\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.8\\microsoft.aspnetcore.openapi.10.0.8.nupkg.sha512",
+    "C:\\Users\\B738NP\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

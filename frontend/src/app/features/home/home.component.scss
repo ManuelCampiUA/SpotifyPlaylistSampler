@@ -367,3 +367,75 @@
     overflow-x: auto;
   }
 }
+
+// ─── HISTORY PANEL ────────────────────────────────────
+.history-card {
+  background: #1a1a1a !important;
+  border-color: #2a2a2a !important;
+  border-radius: 16px !important;
+  margin-bottom: 1.5rem;
+
+  .history-card-content {
+    padding: 0 !important;
+  }
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 0.75rem 0.875rem 1.25rem;
+
+  &__icon {
+    color: #4caf50;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    flex: 1;
+    color: #e0e0e0;
+  }
+
+  &__count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(76, 175, 80, 0.12);
+    color: #4caf50;
+    border-radius: 10px;
+    padding: 2px 8px;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+  }
+}
+
+.history-refresh-btn {
+  flex-shrink: 0;
+}
+
+.history-list {
+  padding: 0.25rem 0 0.25rem !important;
+}
+
+.history-item {
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.history-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.history-thumb-icon {
+  color: #616161;
+}

@@ -1,27 +1,61 @@
-import { Injectable, inject, signal, resource } from '@angular/core';
+import { Injectable, inject, signal, resource, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { PlaylistResult } from '../models/playlist.model';
+import { PlaylistResult, PlaylistSummary } from '../models/playlist.model';
 
-const API_URL = '/api/playlist/analyze';
+type PlaylistRequest =
+  | { type: 'analyze'; url: string }
+  | { type: 'select'; id: string };
 
 @Injectable({ providedIn: 'root' })
 export class PlaylistService {
   readonly #http = inject(HttpClient);
-  readonly #requestUrl = signal<string | undefined>(undefined);
+  readonly #activeRequest = signal<PlaylistRequest | undefined>(undefined);
 
-  readonly playlistResource = resource<PlaylistResult, string | undefined>({
-    params: this.#requestUrl,
-    loader: ({ params: url }) => firstValueFrom(this.#http.post<PlaylistResult>(API_URL, { url })),
+  readonly playlistResource = resource<PlaylistResult | undefined, PlaylistRequest | undefined>({
+    params: this.#activeRequest,
+    loader: ({ params }) => {
+      if (!params) return Promise.resolve(undefined);
+      if (params.type === 'analyze') {
+        return firstValueFrom(
+          this.#http.post<PlaylistResult>('/api/playlist/analyze', { url: params.url }),
+        );
+      }
+      return firstValueFrom(
+        this.#http.get<PlaylistResult>(`/api/playlist/${params.id}`),
+      );
+    },
   });
 
+  readonly historyResource = resource<PlaylistSummary[], boolean>({
+    params: signal<boolean>(true),
+    loader: () =>
+      firstValueFrom(this.#http.get<PlaylistSummary[]>('/api/playlist/history')),
+  });
+
+  constructor() {
+    // Reload history when an analyze completes successfully
+    effect(() => {
+      const val = this.playlistResource.value();
+      const loading = this.playlistResource.isLoading();
+      const req = this.#activeRequest();
+      if (val !== undefined && !loading && req?.type === 'analyze') {
+        this.historyResource.reload();
+      }
+    });
+  }
+
   analyze(url: string): void {
-    // Force reload even if same URL by resetting first
-    if (this.#requestUrl() === url) {
-      this.#requestUrl.set(undefined);
-      Promise.resolve().then(() => this.#requestUrl.set(url));
+    const current = this.#activeRequest();
+    if (current?.type === 'analyze' && current.url === url) {
+      this.#activeRequest.set(undefined);
+      Promise.resolve().then(() => this.#activeRequest.set({ type: 'analyze', url }));
     } else {
-      this.#requestUrl.set(url);
+      this.#activeRequest.set({ type: 'analyze', url });
     }
+  }
+
+  selectById(id: string): void {
+    this.#activeRequest.set({ type: 'select', id });
   }
 }

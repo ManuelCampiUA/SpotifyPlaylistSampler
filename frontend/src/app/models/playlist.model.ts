@@ -13,3 +13,10 @@ export interface PlaylistResult {
   tracks: Track[];
   genres: string[];
 }
+
+export interface PlaylistSummary {
+  spotifyId: string;
+  playlistName: string;
+  totalTracks: number;
+  imageUrl?: string;
+}

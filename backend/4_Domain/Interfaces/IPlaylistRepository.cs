@@ -9,4 +9,7 @@ public interface IPlaylistRepository
 
     /// <summary>Persists a new analysis result.</summary>
     Task SaveAsync(PlaylistCache playlist, CancellationToken ct = default);
+
+    /// <summary>Returns the most recent entry for each distinct Spotify playlist ID.</summary>
+    Task<List<PlaylistCache>> GetAllAsync(CancellationToken ct = default);
 }

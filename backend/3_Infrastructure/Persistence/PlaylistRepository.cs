@@ -17,4 +17,10 @@ public class PlaylistRepository(AppDbContext db) : IPlaylistRepository
         db.Playlists.Add(playlist);
         await db.SaveChangesAsync(ct);
     }
+
+    public async Task<List<PlaylistCache>> GetAllAsync(CancellationToken ct = default)
+        => await db.Playlists
+            .GroupBy(p => p.SpotifyId)
+            .Select(g => g.OrderByDescending(p => p.AnalyzedAt).First())
+            .ToListAsync(ct);
 }

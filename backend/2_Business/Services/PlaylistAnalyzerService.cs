@@ -11,7 +11,7 @@ public partial class PlaylistAnalyzerService(
     IPlaylistRepository repository)
 {
     // Cache is considered fresh for 24 hours.
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(24);
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(24);
 
     // Matches: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
     [GeneratedRegex(@"open\.spotify\.com/playlist/([A-Za-z0-9]+)")]
@@ -48,5 +48,18 @@ public partial class PlaylistAnalyzerService(
             throw new ArgumentException("URL Spotify non valido. Formato atteso: https://open.spotify.com/playlist/{id}");
 
         return match.Groups[1].Value;
+    }
+
+    public async Task<List<PlaylistSummaryDto>> GetHistoryAsync(CancellationToken ct = default)
+    {
+        var all = await repository.GetAllAsync(ct);
+        return all.Select(p => new PlaylistSummaryDto(p.SpotifyId, p.Name, p.AnalyzedAt)).ToList();
+    }
+
+    public async Task<PlaylistResultDto?> GetPlaylistAsync(string spotifyId, CancellationToken ct = default)
+    {
+        var cached = await repository.GetBySpotifyIdAsync(spotifyId, ct);
+        if (cached is null) return null;
+        return JsonSerializer.Deserialize<PlaylistResultDto>(cached.ResultJson);
     }
 }

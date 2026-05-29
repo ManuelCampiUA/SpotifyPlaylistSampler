@@ -12,7 +12,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { PlaylistService } from '../../services/playlist.service';
-import { PlaylistResult } from '../../models/playlist.model';
+import { PlaylistResult, PlaylistSummary } from '../../models/playlist.model';
 
 @Component({
   selector: 'app-home',
@@ -56,6 +56,12 @@ export class HomeComponent {
 
   readonly hasResult = computed(() => !!this.result());
 
+  // History
+  readonly history: Signal<PlaylistSummary[] | undefined> =
+    this.playlistService.historyResource.value;
+  readonly historyLoading = this.playlistService.historyResource.isLoading;
+  readonly hasHistory = computed(() => (this.history()?.length ?? 0) > 0);
+
   analyze(): void {
     if (this.isValidUrl()) {
       this.playlistService.analyze(this.urlInput().trim());
@@ -66,6 +72,14 @@ export class HomeComponent {
     if (event.key === 'Enter') {
       this.analyze();
     }
+  }
+
+  selectPlaylist(spotifyId: string): void {
+    this.playlistService.selectById(spotifyId);
+  }
+
+  refreshHistory(): void {
+    this.playlistService.historyResource.reload();
   }
 
   formatDuration(ms: number): string {

@@ -63,6 +63,44 @@
     </mat-card-content>
   </mat-card>
 
+  <!-- HISTORY PANEL -->
+  @if (hasHistory() || historyLoading()) {
+    <mat-card class="history-card" appearance="outlined">
+      <mat-card-content class="history-card-content">
+        <div class="history-header">
+          <mat-icon class="history-header__icon">history</mat-icon>
+          <span class="history-header__title">Playlist analizzate</span>
+          @if (history()?.length) {
+            <span class="history-header__count">{{ history()!.length }}</span>
+          }
+          <button
+            mat-icon-button
+            class="history-refresh-btn"
+            (click)="refreshHistory()"
+            [disabled]="historyLoading()"
+            matTooltip="Aggiorna lista"
+          >
+            <mat-icon [class.spinning]="historyLoading()">refresh</mat-icon>
+          </button>
+        </div>
+        <mat-divider />
+        <mat-nav-list class="history-list">
+          @for (item of history(); track item.spotifyId) {
+            <mat-list-item class="history-item" (click)="selectPlaylist(item.spotifyId)">
+              @if (item.imageUrl) {
+                <img matListItemAvatar [src]="item.imageUrl" alt="" class="history-thumb" />
+              } @else {
+                <mat-icon matListItemIcon class="history-thumb-icon">album</mat-icon>
+              }
+              <span matListItemTitle>{{ item.playlistName }}</span>
+              <span matListItemLine>{{ item.totalTracks }} brani</span>
+            </mat-list-item>
+          }
+        </mat-nav-list>
+      </mat-card-content>
+    </mat-card>
+  }
+
   <!-- PROGRESS BAR -->
   @if (isLoading()) {
     <mat-progress-bar mode="indeterminate" class="progress-bar" />

@@ -14,6 +14,12 @@ public record PlaylistResultDto(
     List<string> Genres
 );
 
+public record PlaylistSummaryDto(
+    string SpotifyId,
+    string Name,
+    DateTime AnalyzedAt
+);
+
 public record TrackDto(
     string Name,
     List<string> Artists,

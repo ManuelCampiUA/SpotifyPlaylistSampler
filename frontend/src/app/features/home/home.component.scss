@@ -68,6 +68,21 @@
   }
 }
 
+.canvas-btn {
+  margin-top: 1.25rem;
+  border-color: rgba(30, 215, 96, 0.4) !important;
+  color: #1ed760 !important;
+
+  mat-icon {
+    margin-right: 4px;
+  }
+
+  &:hover {
+    background: rgba(30, 215, 96, 0.08) !important;
+    border-color: #1ed760 !important;
+  }
+}
+
 // ─── INPUT CARD ───────────────────────────────────────
 .input-card {
   background: #1a1a1a  ;

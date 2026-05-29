@@ -1,6 +1,7 @@
 import { Component, Signal, computed, inject, signal } from '@angular/core';
 import { JsonPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -20,6 +21,7 @@ import { PlaylistResult, PlaylistSummary } from '../../models/playlist.model';
   imports: [
     JsonPipe,
     FormsModule,
+    RouterLink,
     MatButtonModule,
     MatCardModule,
     MatChipsModule,

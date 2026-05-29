@@ -17,7 +17,9 @@ builder.Services.AddScoped<ISpotifyService, SpotifyService>();
 
 // ── Domain / Application ──────────────────────────────────────────────────
 builder.Services.AddScoped<IPlaylistRepository, PlaylistRepository>();
+builder.Services.AddScoped<ICanvasRepository, CanvasRepository>();
 builder.Services.AddScoped<PlaylistAnalyzerService>();
+builder.Services.AddScoped<CanvasService>();
 
 // ── ASP.NET Core ──────────────────────────────────────────────────────────
 builder.Services.AddControllers();

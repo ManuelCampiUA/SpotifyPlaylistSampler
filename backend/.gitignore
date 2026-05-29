@@ -48,6 +48,10 @@ __screenshots__/
 # Database
 spotify_sampler.db
 spotify_sampler.db-wal
+
+# Secrets / environment-specific settings
+appsettings.Development.json
+appsettings.Production.json
 spotify_sampler.db-shm
 
 # System files

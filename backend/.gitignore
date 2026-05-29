@@ -46,7 +46,9 @@ testem.log
 __screenshots__/
 
 # Database
-spotify-sampler.db
+spotify_sampler.db
+spotify_sampler.db-wal
+spotify_sampler.db-shm
 
 # System files
 .DS_Store

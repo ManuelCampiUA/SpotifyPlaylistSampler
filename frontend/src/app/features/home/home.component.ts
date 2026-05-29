@@ -56,14 +56,16 @@ export class HomeComponent {
 
   readonly hasResult = computed(() => !!this.result());
 
-  // History
+  // Library sidebar
   readonly history: Signal<PlaylistSummary[] | undefined> =
     this.playlistService.historyResource.value;
   readonly historyLoading = this.playlistService.historyResource.isLoading;
   readonly hasHistory = computed(() => (this.history()?.length ?? 0) > 0);
+  readonly selectedPlaylistId = signal<string | undefined>(undefined);
 
   analyze(): void {
     if (this.isValidUrl()) {
+      this.selectedPlaylistId.set(undefined);
       this.playlistService.analyze(this.urlInput().trim());
     }
   }
@@ -75,6 +77,7 @@ export class HomeComponent {
   }
 
   selectPlaylist(spotifyId: string): void {
+    this.selectedPlaylistId.set(spotifyId);
     this.playlistService.selectById(spotifyId);
   }
 

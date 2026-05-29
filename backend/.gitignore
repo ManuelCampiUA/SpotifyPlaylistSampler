@@ -45,6 +45,9 @@ testem.log
 /typings
 __screenshots__/
 
+# Database
+spotify-sampler.db
+
 # System files
 .DS_Store
 Thumbs.db

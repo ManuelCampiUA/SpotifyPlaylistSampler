@@ -46,6 +46,7 @@ interface DragState {
 })
 export class CanvasComponent {
   @ViewChild('svgEl') svgEl!: ElementRef<SVGElement>;
+  @ViewChild('canvasArea') canvasArea!: ElementRef<HTMLDivElement>;
 
   private readonly canvasService = inject(CanvasService);
   private readonly playlistService = inject(PlaylistService);
@@ -129,6 +130,8 @@ export class CanvasComponent {
       next: (state) => {
         this.#localNodes.set(state.nodes);
         this.#localEdges.set(state.edges);
+        const newNode = state.nodes.find(n => n.nodeType === 'playlist' && n.referenceId === spotifyId);
+        if (newNode) this.scrollToNode(newNode.positionX, newNode.positionY);
       },
       error: (err) =>
         this.snackBar.open(err.error ?? 'Errore durante l\'aggiunta', 'Chiudi', { duration: 3000 }),
@@ -247,5 +250,13 @@ export class CanvasComponent {
 
   truncate(label: string, max: number): string {
     return label.length <= max ? label : label.slice(0, max - 1) + '…';
+  }
+
+  private scrollToNode(x: number, y: number): void {
+    const area = this.canvasArea?.nativeElement;
+    if (!area) return;
+    const left = x - area.clientWidth / 2;
+    const top  = y - area.clientHeight / 2;
+    area.scrollTo({ left, top, behavior: 'smooth' });
   }
 }

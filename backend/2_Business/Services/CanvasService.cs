@@ -43,14 +43,13 @@ public class CanvasService(
             .Count(n => n.NodeType == "playlist");
         var color = Palette[playlistCount % Palette.Length];
 
-        // Create playlist node at a staggered position
         var playlistNode = new CanvasNode
         {
             NodeType = "playlist",
             ReferenceId = spotifyId,
             Label = result.PlaylistName,
-            PositionX = 300 + playlistCount * 400,
-            PositionY = 300,
+            PositionX = 1600 + playlistCount * 450,
+            PositionY = 900,
             Color = color,
             ParentPlaylistId = null
         };

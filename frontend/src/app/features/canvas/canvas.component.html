@@ -84,14 +84,7 @@
       @if (connectMode()) {
         <div class="hint-box hint-box--connect">
           <mat-icon>info</mat-icon>
-          @if (!pendingSource()) {
-            <span>Clicca un nodo <strong>sorgente</strong></span>
-          } @else {
-            <span>
-              <strong>{{ truncate(pendingSource()!.label, 18) }}</strong>
-              &rarr; clicca la destinazione
-            </span>
-          }
+          <span>Clicca un nodo <strong>sorgente</strong>, poi la <strong>destinazione</strong></span>
         </div>
       }
 
@@ -105,81 +98,15 @@
     </aside>
 
     <!-- CANVAS AREA -->
-    <div class="canvas-area" #canvasArea>
-      <svg
-        #svgEl
-        class="canvas-svg"
-        [class.connect-mode]="connectMode()"
-        [attr.width]="SVG_WIDTH"
-        [attr.height]="SVG_HEIGHT"
-        (mousemove)="onSvgMouseMove($event)"
-        (mouseup)="onSvgMouseUp()"
-        (mouseleave)="onSvgMouseUp()"
-      >
-        <!-- GRID DOTS -->
-        <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <circle cx="0.5" cy="0.5" r="0.5" fill="rgba(255,255,255,0.07)" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
+    <div class="canvas-area">
+      <div #visContainer class="vis-container"></div>
 
-        <!-- EDGES LAYER -->
-        <g class="edges-layer">
-          @for (edge of renderedEdges(); track edge.id) {
-            <line
-              [attr.x1]="edge.x1"
-              [attr.y1]="edge.y1"
-              [attr.x2]="edge.x2"
-              [attr.y2]="edge.y2"
-              class="edge"
-              [class.edge--intra]="edge.edgeType === 'intra-playlist'"
-              [class.edge--custom]="edge.edgeType === 'custom'"
-              (click)="onEdgeClick($event, edge)"
-            />
-          }
-        </g>
-
-        <!-- NODES LAYER -->
-        <g class="nodes-layer">
-          @for (node of nodes(); track node.id) {
-            <g
-              class="node"
-              [class.node--playlist]="node.nodeType === 'playlist'"
-              [class.node--track]="node.nodeType === 'track'"
-              [class.node--pending]="pendingSource()?.id === node.id"
-              [attr.transform]="'translate(' + node.positionX + ',' + node.positionY + ')'"
-              (mousedown)="onNodeMouseDown($event, node)"
-              (click)="onNodeClick($event, node)"
-            >
-              <circle
-                [attr.r]="node.nodeType === 'playlist' ? 22 : 12"
-                [attr.fill]="node.color ?? '#4CAF50'"
-              />
-              <text
-                [attr.dy]="node.nodeType === 'playlist' ? 40 : 26"
-                text-anchor="middle"
-                class="node-label"
-                [class.node-label--playlist]="node.nodeType === 'playlist'"
-              >
-                {{ truncate(node.label, 22) }}
-              </text>
-            </g>
-          }
-        </g>
-
-        <!-- EMPTY STATE -->
-        @if (nodes().length === 0 && !isLoading()) {
-          <text
-            [attr.x]="SVG_WIDTH / 2"
-            [attr.y]="SVG_HEIGHT / 2"
-            text-anchor="middle"
-            class="canvas-empty-hint"
-          >
-            Aggiungi una playlist dalla barra laterale
-          </text>
-        }
-      </svg>
+      @if (!isLoading() && history()?.length === 0) {
+        <div class="canvas-empty-hint">
+          <mat-icon>hub</mat-icon>
+          <p>Aggiungi una playlist dalla barra laterale</p>
+        </div>
+      }
     </div>
 
   </div>

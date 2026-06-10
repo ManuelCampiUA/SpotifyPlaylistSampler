@@ -6,6 +6,8 @@ import {
   effect,
   ElementRef,
   ViewChild,
+  OnDestroy,
+  AfterViewInit,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,21 +16,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Network, DataSet, Options } from 'vis-network/standalone';
 
 import { CanvasService } from '../../services/canvas.service';
 import { PlaylistService } from '../../services/playlist.service';
-import { CanvasNodeModel, CanvasEdgeModel, RenderedEdge } from '../../models/canvas.model';
+import { CanvasNodeModel, CanvasEdgeModel, CanvasState } from '../../models/canvas.model';
 import { PlaylistSummary } from '../../models/playlist.model';
-
-const DRAG_THRESHOLD_PX = 5;
-
-interface DragState {
-  nodeId: number;
-  startMouseX: number;
-  startMouseY: number;
-  startNodeX: number;
-  startNodeY: number;
-}
 
 @Component({
   selector: 'app-canvas',
@@ -44,40 +37,21 @@ interface DragState {
   templateUrl: './canvas.component.html',
   styleUrl: './canvas.component.scss',
 })
-export class CanvasComponent {
-  @ViewChild('svgEl') svgEl!: ElementRef<SVGElement>;
-  @ViewChild('canvasArea') canvasArea!: ElementRef<HTMLDivElement>;
+export class CanvasComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('visContainer') visContainer!: ElementRef<HTMLDivElement>;
 
   private readonly canvasService = inject(CanvasService);
   private readonly playlistService = inject(PlaylistService);
   private readonly snackBar = inject(MatSnackBar);
 
-  readonly SVG_WIDTH = 4000;
-  readonly SVG_HEIGHT = 3000;
+  // ── Vis-Network instance ─────────────────────────────────────────────────
+  private network: Network | null = null;
+  private readonly visNodes = new DataSet<any>();
+  private readonly visEdges = new DataSet<any>();
 
-  // ── Local canvas state (immediately reactive, saved async) ───────────────
+  // ── Local state mirrors (for sidebar logic) ──────────────────────────────
   readonly #localNodes = signal<CanvasNodeModel[]>([]);
   readonly #localEdges = signal<CanvasEdgeModel[]>([]);
-
-  readonly nodes = this.#localNodes.asReadonly();
-  readonly edges = this.#localEdges.asReadonly();
-
-  readonly nodeMap = computed(() => {
-    const map = new Map<number, CanvasNodeModel>();
-    for (const n of this.#localNodes()) map.set(n.id, n);
-    return map;
-  });
-
-  readonly renderedEdges = computed<RenderedEdge[]>(() => {
-    const map = this.nodeMap();
-    return this.#localEdges().map(edge => ({
-      ...edge,
-      x1: map.get(edge.sourceNodeId)?.positionX ?? 0,
-      y1: map.get(edge.sourceNodeId)?.positionY ?? 0,
-      x2: map.get(edge.targetNodeId)?.positionX ?? 0,
-      y2: map.get(edge.targetNodeId)?.positionY ?? 0,
-    }));
-  });
 
   readonly onCanvasPlaylistIds = computed(
     () => new Set(this.#localNodes().filter(n => n.nodeType === 'playlist').map(n => n.referenceId))
@@ -85,38 +59,189 @@ export class CanvasComponent {
 
   readonly isLoading = this.canvasService.canvasResource.isLoading;
 
-  // ── Interaction state ────────────────────────────────────────────────────
+  // ── Connect mode ─────────────────────────────────────────────────────────
   readonly connectMode = signal(false);
-  readonly pendingSource = signal<CanvasNodeModel | null>(null);
   readonly hasCustomEdges = computed(() => this.#localEdges().some(e => e.edgeType === 'custom'));
-
-  // Regular properties for drag (not signals — never used in template)
-  private dragState: DragState | null = null;
-  private hasDragged = false;
+  private pendingSourceId: number | null = null;
 
   // ── Library sidebar ──────────────────────────────────────────────────────
   readonly history = this.playlistService.historyResource.value;
   readonly historyLoading = this.playlistService.historyResource.isLoading;
 
   constructor() {
-    // Sync resource into local signals on first load
     effect(() => {
       const val = this.canvasService.canvasResource.value();
-      if (val) {
-        this.#localNodes.set(val.nodes);
-        this.#localEdges.set(val.edges);
-      }
+      if (val) this.applyState(val);
     });
   }
 
-  // ── Sidebar helpers ──────────────────────────────────────────────────────
+  ngAfterViewInit(): void {
+    this.initNetwork();
+  }
+
+  ngOnDestroy(): void {
+    this.network?.destroy();
+  }
+
+  // ── Vis-Network init ─────────────────────────────────────────────────────
+
+  private initNetwork(): void {
+    const options: Options = {
+      physics: {
+        enabled: true,
+        solver: 'forceAtlas2Based',
+        forceAtlas2Based: {
+          gravitationalConstant: -60,
+          centralGravity: 0.008,
+          springLength: 120,
+          springConstant: 0.04,
+          damping: 0.5,
+        },
+        stabilization: { iterations: 150, fit: true },
+      },
+      interaction: {
+        hover: true,
+        tooltipDelay: 200,
+        multiselect: false,
+      },
+      edges: {
+        smooth: { enabled: true, type: 'dynamic', roundness: 0.4 },
+        color: { inherit: false },
+      },
+      nodes: {
+        shape: 'dot',
+        font: { color: '#cccccc', size: 11, face: 'Inter, sans-serif' },
+        borderWidth: 0,
+        shadow: { enabled: true, color: 'rgba(0,0,0,0.5)', size: 8, x: 2, y: 2 },
+      },
+    };
+
+    this.network = new Network(
+      this.visContainer.nativeElement,
+      { nodes: this.visNodes, edges: this.visEdges },
+      options
+    );
+
+    // Save positions after drag
+    this.network.on('dragEnd', (params) => {
+      if (!params.nodes.length) return;
+      const nodeId: number = params.nodes[0];
+      const pos = this.network!.getPosition(nodeId);
+      this.canvasService.updateNodePosition(nodeId, pos.x, pos.y).subscribe();
+    });
+
+    // Handle node click for connect mode
+    this.network.on('click', (params) => {
+      if (!this.connectMode()) return;
+      if (!params.nodes.length) return;
+
+      const clickedId: number = params.nodes[0];
+
+      if (this.pendingSourceId === null) {
+        this.pendingSourceId = clickedId;
+        this.visNodes.update({ id: clickedId, borderWidth: 3, color: { border: '#ffffff' } });
+        return;
+      }
+
+      if (this.pendingSourceId === clickedId) {
+        this.visNodes.update({ id: clickedId, borderWidth: 0, color: { border: 'transparent' } });
+        this.pendingSourceId = null;
+        return;
+      }
+
+      const sourceId = this.pendingSourceId;
+      this.visNodes.update({ id: sourceId, borderWidth: 0, color: { border: 'transparent' } });
+      this.pendingSourceId = null;
+
+      this.canvasService.createEdge(sourceId, clickedId).subscribe({
+        next: (edge) => {
+          this.#localEdges.update(edges => [...edges, edge]);
+          this.visEdges.add(this.mapEdgeToVis(edge));
+        },
+        error: (err) =>
+          this.snackBar.open(err.error ?? 'Errore durante il collegamento', 'Chiudi', { duration: 3000 }),
+      });
+    });
+
+    // Handle edge click to delete custom edges
+    this.network.on('selectEdge', (params) => {
+      if (this.connectMode()) return;
+      if (!params.edges.length) return;
+
+      const edgeId: number = params.edges[0];
+      const edge = this.#localEdges().find(e => e.id === edgeId);
+      if (!edge || edge.edgeType !== 'custom') {
+        this.network!.unselectAll();
+        return;
+      }
+
+      this.canvasService.removeEdge(edgeId).subscribe({
+        next: () => {
+          this.#localEdges.update(edges => edges.filter(e => e.id !== edgeId));
+          this.visEdges.remove(edgeId);
+        },
+        error: () =>
+          this.snackBar.open('Errore durante la rimozione del collegamento', 'Chiudi', { duration: 3000 }),
+      });
+    });
+  }
+
+  // ── State sync ────────────────────────────────────────────────────────────
+
+  private applyState(state: CanvasState): void {
+    this.#localNodes.set(state.nodes);
+    this.#localEdges.set(state.edges);
+
+    this.visNodes.clear();
+    this.visEdges.clear();
+    this.visNodes.add(state.nodes.map(n => this.mapNodeToVis(n)));
+    this.visEdges.add(state.edges.map(e => this.mapEdgeToVis(e)));
+  }
+
+  private mapNodeToVis(n: CanvasNodeModel): any {
+    const isPlaylist = n.nodeType === 'playlist';
+    return {
+      id: n.id,
+      label: n.label,
+      x: n.positionX,
+      y: n.positionY,
+      size: isPlaylist ? 22 : 10,
+      color: {
+        background: n.color ?? '#1ed760',
+        border: 'transparent',
+        highlight: { background: n.color ?? '#1ed760', border: '#ffffff' },
+        hover: { background: n.color ?? '#1ed760', border: '#ffffff' },
+      },
+      font: {
+        size: isPlaylist ? 13 : 10,
+        bold: isPlaylist,
+        color: isPlaylist ? '#ffffff' : '#aaaaaa',
+      },
+      physics: true,
+    };
+  }
+
+  private mapEdgeToVis(e: CanvasEdgeModel): any {
+    const isCustom = e.edgeType === 'custom';
+    return {
+      id: e.id,
+      from: e.sourceNodeId,
+      to: e.targetNodeId,
+      color: isCustom ? { color: '#1ed760', opacity: 0.9 } : { color: '#ffffff', opacity: 0.08 },
+      width: isCustom ? 2 : 1,
+      dashes: isCustom ? [6, 4] : false,
+      selectable: isCustom,
+      chosen: isCustom,
+    };
+  }
+
+  // ── Sidebar helpers ───────────────────────────────────────────────────────
 
   isOnCanvas(spotifyId: string): boolean {
     return this.onCanvasPlaylistIds().has(spotifyId);
   }
 
   displayName(p: PlaylistSummary): string {
-    // Backend sends `name`, frontend model has `playlistName` — handle both
     return p.playlistName || (p as any).name || p.spotifyId;
   }
 
@@ -128,10 +253,11 @@ export class CanvasComponent {
   addToCanvas(spotifyId: string): void {
     this.canvasService.addPlaylist(spotifyId).subscribe({
       next: (state) => {
-        this.#localNodes.set(state.nodes);
-        this.#localEdges.set(state.edges);
+        this.applyState(state);
         const newNode = state.nodes.find(n => n.nodeType === 'playlist' && n.referenceId === spotifyId);
-        if (newNode) this.scrollToNode(newNode.positionX, newNode.positionY);
+        if (newNode) {
+          setTimeout(() => this.network?.focus(newNode.id, { scale: 0.8, animation: true }), 300);
+        }
       },
       error: (err) =>
         this.snackBar.open(err.error ?? 'Errore durante l\'aggiunta', 'Chiudi', { duration: 3000 }),
@@ -140,123 +266,20 @@ export class CanvasComponent {
 
   removeFromCanvas(spotifyId: string): void {
     this.canvasService.removePlaylist(spotifyId).subscribe({
-      next: (state) => {
-        this.#localNodes.set(state.nodes);
-        this.#localEdges.set(state.edges);
-      },
+      next: (state) => this.applyState(state),
       error: () =>
         this.snackBar.open('Errore durante la rimozione', 'Chiudi', { duration: 3000 }),
     });
   }
 
-  // ── Connect mode ─────────────────────────────────────────────────────────
+  // ── Connect mode ──────────────────────────────────────────────────────────
 
   toggleConnectMode(): void {
-    this.connectMode.update(v => !v);
-    this.pendingSource.set(null);
-  }
+    const entering = !this.connectMode();
+    this.connectMode.set(entering);
+    this.pendingSourceId = null;
 
-  // ── Node events ──────────────────────────────────────────────────────────
-
-  onNodeMouseDown(event: MouseEvent, node: CanvasNodeModel): void {
-    event.stopPropagation();
-    event.preventDefault();
-    this.hasDragged = false;
-
-    if (this.connectMode()) return; // drag disabled in connect mode
-
-    this.dragState = {
-      nodeId: node.id,
-      startMouseX: event.clientX,
-      startMouseY: event.clientY,
-      startNodeX: node.positionX,
-      startNodeY: node.positionY,
-    };
-  }
-
-  onNodeClick(event: MouseEvent, node: CanvasNodeModel): void {
-    event.stopPropagation();
-
-    if (this.hasDragged) return; // was a drag, not a click
-    if (!this.connectMode()) return;
-
-    const pending = this.pendingSource();
-
-    if (!pending) {
-      this.pendingSource.set(node);
-      return;
-    }
-
-    if (pending.id === node.id) {
-      this.pendingSource.set(null); // deselect
-      return;
-    }
-
-    this.pendingSource.set(null);
-    this.canvasService.createEdge(pending.id, node.id).subscribe({
-      next: (edge) => this.#localEdges.update(edges => [...edges, edge]),
-      error: (err) =>
-        this.snackBar.open(err.error ?? 'Errore durante il collegamento', 'Chiudi', { duration: 3000 }),
-    });
-  }
-
-  // ── SVG mouse events ─────────────────────────────────────────────────────
-
-  onSvgMouseMove(event: MouseEvent): void {
-    if (!this.dragState) return;
-
-    const dx = event.clientX - this.dragState.startMouseX;
-    const dy = event.clientY - this.dragState.startMouseY;
-
-    if (!this.hasDragged && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-    this.hasDragged = true;
-
-    const newX = this.dragState.startNodeX + dx;
-    const newY = this.dragState.startNodeY + dy;
-    const nodeId = this.dragState.nodeId;
-
-    this.#localNodes.update(nodes =>
-      nodes.map(n => n.id === nodeId ? { ...n, positionX: newX, positionY: newY } : n)
-    );
-  }
-
-  onSvgMouseUp(): void {
-    if (!this.dragState) return;
-
-    if (this.hasDragged) {
-      const node = this.nodeMap().get(this.dragState.nodeId);
-      if (node) {
-        this.canvasService.updateNodePosition(node.id, node.positionX, node.positionY).subscribe();
-      }
-    }
-
-    this.dragState = null;
-  }
-
-  // ── Edge events ──────────────────────────────────────────────────────────
-
-  onEdgeClick(event: MouseEvent, edge: CanvasEdgeModel): void {
-    event.stopPropagation();
-    if (edge.edgeType !== 'custom') return;
-
-    this.canvasService.removeEdge(edge.id).subscribe({
-      next: () => this.#localEdges.update(edges => edges.filter(e => e.id !== edge.id)),
-      error: () =>
-        this.snackBar.open('Errore durante la rimozione del collegamento', 'Chiudi', { duration: 3000 }),
-    });
-  }
-
-  // ── Utilities ────────────────────────────────────────────────────────────
-
-  truncate(label: string, max: number): string {
-    return label.length <= max ? label : label.slice(0, max - 1) + '…';
-  }
-
-  private scrollToNode(x: number, y: number): void {
-    const area = this.canvasArea?.nativeElement;
-    if (!area) return;
-    const left = x - area.clientWidth / 2;
-    const top  = y - area.clientHeight / 2;
-    area.scrollTo({ left, top, behavior: 'smooth' });
+    // Disable physics drag-to-connect confusion: freeze nodes in connect mode
+    this.network?.setOptions({ interaction: { dragNodes: !entering } });
   }
 }

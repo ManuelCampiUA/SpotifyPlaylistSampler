@@ -217,78 +217,40 @@
 
 .canvas-area {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   background: #0d0d0d;
+  position: relative;
 }
 
-.canvas-svg {
-  display: block;
-  cursor: default;
+.vis-container {
+  width: 100%;
+  height: 100%;
 
-  &.connect-mode {
-    cursor: crosshair;
-  }
+  // Override vis-network default white background
+  background: #0d0d0d !important;
 }
 
-// ── SVG element styles ────────────────────────────────────────────────────────
-// Note: Angular applies scoped attributes to SVG elements, so these work correctly.
-
-.edge {
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  fill: none;
-  pointer-events: none;
-
-  &--intra {
-    stroke: rgba(255, 255, 255, 0.1);
-  }
-
-  &--custom {
-    stroke: #1ed760;
-    stroke-width: 2;
-    stroke-dasharray: 6 3;
-    pointer-events: stroke;
-    cursor: pointer;
-
-    &:hover {
-      stroke: #ff5252;
-      stroke-width: 2.5;
-    }
-  }
-}
-
-.node {
-  cursor: grab;
-  user-select: none;
-
-  &:active {
-    cursor: grabbing;
-  }
-
-  &--playlist circle {
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
-  }
-
-  &--pending circle {
-    stroke: #fff;
-    stroke-width: 3;
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
-  }
-}
-
-.node-label {
-  fill: rgba(255, 255, 255, 0.7);
-  font-size: 10px;
-  pointer-events: none;
-
-  &--playlist {
-    fill: rgba(255, 255, 255, 0.9);
-    font-size: 11px;
-    font-weight: 600;
-  }
-}
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 .canvas-empty-hint {
-  fill: rgba(255, 255, 255, 0.15);
-  font-size: 18px;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+
+  mat-icon {
+    font-size: 48px;
+    height: 48px;
+    width: 48px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 1rem;
+  }
 }

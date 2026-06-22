@@ -50,26 +50,4 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
             return NotFound(ex.Message);
         }
     }
-
-    [HttpPost("edges")]
-    public async Task<ActionResult<CanvasEdgeDto>> CreateEdge(
-        [FromBody] CreateEdgeRequestDto request, CancellationToken ct)
-    {
-        try
-        {
-            CanvasEdgeDto edge = await canvasService.CreateEdgeAsync(request.SourceNodeId, request.TargetNodeId, ct);
-            return Ok(edge);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    [HttpDelete("edges/{id:int}")]
-    public async Task<IActionResult> RemoveEdge(int id, CancellationToken ct)
-    {
-        await canvasService.RemoveEdgeAsync(id, ct);
-        return NoContent();
-    }
 }

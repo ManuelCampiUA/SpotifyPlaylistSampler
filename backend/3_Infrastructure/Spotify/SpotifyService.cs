@@ -12,10 +12,10 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
         var client = BuildClient();
 
         // 1. Fetch playlist metadata + first page of tracks
-        var playlist = await client.Playlists.Get(playlistId);
+        var playlist = await client.Playlists.Get(playlistId, ct);
 
         // 2. Paginate through ALL tracks (handles playlists > 100 items)
-        var allItems = await client.PaginateAll(playlist.Items!);
+        var allItems = await client.PaginateAll(playlist.Items!, cancellationToken: ct);
 
         var tracks = allItems
             .Select(item => item.Track)
@@ -51,7 +51,7 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
         // 6. Map to DTOs
         var trackDtos = tracks.Select(t => new TrackDto(
             Name: t.Name,
-            Artists: t.Artists.Select(a => a.Name).ToList(),
+            Artists: [.. t.Artists.Select(a => a.Name)],
             DurationMs: t.DurationMs,
             PreviewUrl: t.PreviewUrl
         )).ToList();

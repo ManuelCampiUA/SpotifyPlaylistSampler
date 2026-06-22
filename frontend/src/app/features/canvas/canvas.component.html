@@ -6,20 +6,9 @@
       <mat-icon>arrow_back</mat-icon>
     </button>
     <span class="canvas-toolbar__title">
-      <mat-icon>hub</mat-icon>
+      <mat-icon>dashboard</mat-icon>
       Canvas Playlist
     </span>
-    <div class="canvas-toolbar__actions">
-      <button
-        mat-stroked-button
-        [class.connect-active]="connectMode()"
-        (click)="toggleConnectMode()"
-        [matTooltip]="connectMode() ? 'Annulla modalità collegamento' : 'Attiva: clicca nodo sorgente, poi destinazione'"
-      >
-        <mat-icon>{{ connectMode() ? 'link_off' : 'add_link' }}</mat-icon>
-        {{ connectMode() ? 'Annulla' : 'Collega nodi' }}
-      </button>
-    </div>
   </header>
 
   @if (isLoading()) {
@@ -54,7 +43,7 @@
               @if (isOnCanvas(p.spotifyId)) {
                 <button
                   mat-icon-button
-                  class="sidebar-action-btn sidebar-action-btn--remove"
+                  class="sidebar-action-btn--remove"
                   (click)="removeFromCanvas(p.spotifyId)"
                   matTooltip="Rimuovi dalla canvas"
                 >
@@ -63,9 +52,9 @@
               } @else {
                 <button
                   mat-icon-button
-                  class="sidebar-action-btn sidebar-action-btn--add"
+                  class="sidebar-action-btn--add"
                   (click)="addToCanvas(p.spotifyId)"
-                  matTooltip="Aggiungi alla canvas"
+                  matTooltip="Aggiungi a canvas"
                 >
                   <mat-icon>add_circle_outline</mat-icon>
                 </button>
@@ -79,34 +68,31 @@
           <p>Analizza le playlist dalla home per aggiungerle qui</p>
         </div>
       }
-
-      <!-- Connect mode hint -->
-      @if (connectMode()) {
-        <div class="hint-box hint-box--connect">
-          <mat-icon>info</mat-icon>
-          <span>Clicca un nodo <strong>sorgente</strong>, poi la <strong>destinazione</strong></span>
-        </div>
-      }
-
-      <!-- Custom edge hint -->
-      @if (hasCustomEdges() && !connectMode()) {
-        <div class="hint-box hint-box--edge">
-          <mat-icon>info</mat-icon>
-          <span>Clicca un collegamento <strong>verde</strong> per eliminarlo</span>
-        </div>
-      }
     </aside>
 
     <!-- CANVAS AREA -->
-    <div class="canvas-area">
-      <div #visContainer class="vis-container"></div>
+    <div class="canvas-area" cdkDropList [cdkDropListSortingDisabled]="true">
 
-      @if (!isLoading() && history()?.length === 0) {
+      @if (!isLoading() && blocks().length === 0) {
         <div class="canvas-empty-hint">
-          <mat-icon>hub</mat-icon>
+          <mat-icon>dashboard</mat-icon>
           <p>Aggiungi una playlist dalla barra laterale</p>
         </div>
       }
+
+      @for (block of blocks(); track block.id) {
+        <div
+          class="track-block"
+          cdkDrag
+          [style.left.px]="block.positionX"
+          [style.top.px]="block.positionY"
+          [style.background-color]="block.color"
+          [matTooltip]="block.label"
+          matTooltipPosition="above"
+          (cdkDragEnded)="onDragEnded($event, block)"
+        ></div>
+      }
+
     </div>
 
   </div>

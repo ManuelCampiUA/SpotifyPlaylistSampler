@@ -12,6 +12,7 @@ public class CanvasNode
     /// </summary>
     public string ReferenceId { get; set; } = default!;
     public string Label { get; set; } = default!;
+    public string? Artist { get; set; }
     public double PositionX { get; set; }
     public double PositionY { get; set; }
     public string? Color { get; set; }

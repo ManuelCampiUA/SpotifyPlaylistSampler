@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Observable } from 'rxjs';
-import { CanvasState, CanvasNodeModel, CanvasEdgeModel } from '../models/canvas.model';
+import { CanvasState, CanvasNodeModel } from '../models/canvas.model';
 
 @Injectable({ providedIn: 'root' })
 export class CanvasService {
@@ -19,29 +19,19 @@ export class CanvasService {
     this.#refreshTrigger.update(v => v + 1);
   }
 
-  // ── Playlist nodes 
+  // ── Playlist blocks
 
   addPlaylistNode(spotifyId: string): Observable<CanvasState> {
     return this.#http.post<CanvasState>('/api/canvas/playlist', { spotifyId });
   }
 
-  removePlaylistNode(spotifyId: string): Observable<CanvasState> {
-    return this.#http.delete<CanvasState>(`/api/canvas/playlist/${spotifyId}`);
+  removePlaylistNode(spotifyId: string): Observable<void> {
+    return this.#http.delete<void>(`/api/canvas/playlist/${spotifyId}`);
   }
 
-  // ── Nodes
+  // ── Block position
 
   updateNodePosition(id: number, positionX: number, positionY: number): Observable<CanvasNodeModel> {
     return this.#http.put<CanvasNodeModel>(`/api/canvas/nodes/${id}`, { positionX, positionY });
-  }
-
-  // ── Edges
-
-  createEdge(sourceNodeId: number, targetNodeId: number): Observable<CanvasEdgeModel> {
-    return this.#http.post<CanvasEdgeModel>('/api/canvas/edges', { sourceNodeId, targetNodeId });
-  }
-
-  removeEdge(id: number): Observable<void> {
-    return this.#http.delete<void>(`/api/canvas/edges/${id}`);
   }
 }

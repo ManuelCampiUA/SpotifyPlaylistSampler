@@ -1,7 +1,8 @@
 :host {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   background: #121212;
   color: #fff;
@@ -38,12 +39,6 @@
     align-items: center;
     gap: 8px;
   }
-}
-
-.connect-active {
-  background: rgba(30, 215, 96, 0.12) !important;
-  color: #1ed760 !important;
-  border-color: #1ed760 !important;
 }
 
 // ── Layout ────────────────────────────────────────────────────────────────────
@@ -97,9 +92,6 @@
   gap: 4px;
   transition: background 0.15s;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-  }
 
   &__info {
     display: flex;
@@ -175,59 +167,55 @@
   }
 }
 
-.hint-box {
-  margin: 10px 10px 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  font-size: 0.78rem;
-  color: #aaa;
-  line-height: 1.4;
-
-  mat-icon {
-    font-size: 15px !important;
-    height: 15px !important;
-    width: 15px !important;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-
-  &--connect {
-    background: rgba(30, 215, 96, 0.08);
-    border: 1px solid rgba(30, 215, 96, 0.25);
-
-    mat-icon {
-      color: #1ed760;
-    }
-  }
-
-  &--edge {
-    background: rgba(255, 152, 0, 0.08);
-    border: 1px solid rgba(255, 152, 0, 0.25);
-
-    mat-icon {
-      color: #ff9800;
-    }
-  }
-}
-
 // ── Canvas area ───────────────────────────────────────────────────────────────
 
 .canvas-area {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   background: #0d0d0d;
   position: relative;
+  min-height: 100vh;
 }
 
-.vis-container {
-  width: 100%;
-  height: 100%;
+// ── Track block ───────────────────────────────────────────────────────────────
 
-  // Override vis-network default white background
-  background: #0d0d0d !important;
+.track-block {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow 0.15s, transform 0.15s, filter 0.15s;
+
+  &:hover {
+    transform: scale(1.25);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    filter: brightness(1.2);
+    z-index: 500;
+  }
+
+  &:active,
+  &.cdk-drag-dragging {
+    cursor: grabbing;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+    z-index: 1000;
+  }
+}
+
+// CDK drag placeholder & preview
+.cdk-drag-preview {
+  border-radius: 5px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+  width: 28px;
+  height: 28px;
+  opacity: 0.8;
+}
+
+.cdk-drag-animating {
+  transition: transform 150ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────

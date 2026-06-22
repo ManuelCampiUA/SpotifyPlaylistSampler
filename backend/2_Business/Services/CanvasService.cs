@@ -5,9 +5,7 @@ using backend.Domain.Interfaces;
 
 namespace backend.Business.Services;
 
-public class CanvasService(
-    ICanvasRepository canvasRepository,
-    IPlaylistRepository playlistRepository)
+public class CanvasService(ICanvasRepository canvasRepository, IPlaylistRepository playlistRepository)
 {
     private static readonly string[] Palette =
     [
@@ -21,27 +19,27 @@ public class CanvasService(
         var edges = await canvasRepository.GetAllEdgesAsync(ct);
 
         return new CanvasStateDto(
-            Nodes: nodes.Select(MapNodeDto).ToList(),
-            Edges: edges.Select(MapEdgeDto).ToList()
-        );
+            Nodes: [.. nodes.Select(MapNodeDto)],
+            Edges: [.. edges.Select(MapEdgeDto)]);
     }
 
     public async Task<CanvasStateDto> AddPlaylistAsync(string spotifyId, CancellationToken ct = default)
     {
-        // Guard: don't add the same playlist twice
-        var existing = await canvasRepository.GetNodeByReferenceIdAsync(spotifyId, ct);
+        CanvasNode? existing = await canvasRepository.GetNodeByReferenceIdAsync(spotifyId, ct);
         if (existing is not null)
-            throw new InvalidOperationException("Questa playlist è già presente sulla canvas.");
+        {
+            CanvasStateDto currentState = await GetCanvasAsync(ct);
+            return currentState;
+        }
 
-        var cached = await playlistRepository.GetBySpotifyIdAsync(spotifyId, ct)
+        PlaylistCache saved = await playlistRepository.GetBySpotifyIdAsync(spotifyId, ct)
             ?? throw new ArgumentException("Playlist non trovata. Analizzala prima dalla pagina principale.");
 
-        var result = JsonSerializer.Deserialize<PlaylistResultDto>(cached.ResultJson)!;
+        PlaylistResultDto result = JsonSerializer.Deserialize<PlaylistResultDto>(saved.ResultJson)!;
 
         // Pick a color based on how many playlists are already on canvas
-        var playlistCount = (await canvasRepository.GetAllNodesAsync(ct))
-            .Count(n => n.NodeType == "playlist");
-        var color = Palette[playlistCount % Palette.Length];
+        int playlistCount = (await canvasRepository.GetAllNodesAsync(ct)).Count(n => n.NodeType == "playlist");
+        string color = Palette[playlistCount % Palette.Length];
 
         var playlistNode = new CanvasNode
         {
@@ -84,7 +82,8 @@ public class CanvasService(
 
         await canvasRepository.AddEdgesAsync(edges, ct);
 
-        return await GetCanvasAsync(ct);
+        var newState = await GetCanvasAsync(ct);
+        return newState;
     }
 
     public async Task<CanvasNodeDto> UpdateNodePositionAsync(int nodeId, double x, double y, CancellationToken ct = default)

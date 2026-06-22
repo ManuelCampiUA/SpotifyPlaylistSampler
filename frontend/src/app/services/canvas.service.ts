@@ -8,6 +8,8 @@ export class CanvasService {
   readonly #http = inject(HttpClient);
   readonly #refreshTrigger = signal(0);
 
+  // ── Canvas state
+
   readonly canvasResource = resource<CanvasState | undefined, number>({
     params: this.#refreshTrigger,
     loader: () => firstValueFrom(this.#http.get<CanvasState>('/api/canvas')),
@@ -17,17 +19,23 @@ export class CanvasService {
     this.#refreshTrigger.update(v => v + 1);
   }
 
-  addPlaylist(spotifyId: string): Observable<CanvasState> {
+  // ── Playlist nodes 
+
+  addPlaylistNode(spotifyId: string): Observable<CanvasState> {
     return this.#http.post<CanvasState>('/api/canvas/playlist', { spotifyId });
   }
 
-  removePlaylist(spotifyId: string): Observable<CanvasState> {
+  removePlaylistNode(spotifyId: string): Observable<CanvasState> {
     return this.#http.delete<CanvasState>(`/api/canvas/playlist/${spotifyId}`);
   }
+
+  // ── Nodes
 
   updateNodePosition(id: number, positionX: number, positionY: number): Observable<CanvasNodeModel> {
     return this.#http.put<CanvasNodeModel>(`/api/canvas/nodes/${id}`, { positionX, positionY });
   }
+
+  // ── Edges
 
   createEdge(sourceNodeId: number, targetNodeId: number): Observable<CanvasEdgeModel> {
     return this.#http.post<CanvasEdgeModel>('/api/canvas/edges', { sourceNodeId, targetNodeId });

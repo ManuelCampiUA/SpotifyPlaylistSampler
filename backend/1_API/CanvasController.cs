@@ -16,17 +16,12 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
     }
 
     [HttpPost("playlist")]
-    public async Task<ActionResult<CanvasStateDto>> AddPlaylist(
-        [FromBody] AddPlaylistToCanvasRequestDto request, CancellationToken ct)
+    public async Task<ActionResult<CanvasStateDto>> AddPlaylist([FromBody] AddPlaylistToCanvasRequestDto request, CancellationToken ct)
     {
         try
         {
-            var state = await canvasService.AddPlaylistAsync(request.SpotifyId, ct);
+            CanvasStateDto state = await canvasService.AddPlaylistAsync(request.SpotifyId, ct);
             return Ok(state);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(ex.Message);
         }
         catch (ArgumentException ex)
         {
@@ -35,10 +30,10 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
     }
 
     [HttpDelete("playlist/{spotifyId}")]
-    public async Task<ActionResult<CanvasStateDto>> RemovePlaylist(string spotifyId, CancellationToken ct)
+    public async Task<IActionResult> RemovePlaylist(string spotifyId, CancellationToken ct)
     {
-        var state = await canvasService.RemovePlaylistAsync(spotifyId, ct);
-        return Ok(state);
+        await canvasService.RemovePlaylistAsync(spotifyId, ct);
+        return NoContent();
     }
 
     [HttpPut("nodes/{id:int}")]
@@ -47,7 +42,7 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
     {
         try
         {
-            var node = await canvasService.UpdateNodePositionAsync(id, request.PositionX, request.PositionY, ct);
+            CanvasNodeDto node = await canvasService.UpdateNodePositionAsync(id, request.PositionX, request.PositionY, ct);
             return Ok(node);
         }
         catch (ArgumentException ex)
@@ -62,7 +57,7 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
     {
         try
         {
-            var edge = await canvasService.CreateEdgeAsync(request.SourceNodeId, request.TargetNodeId, ct);
+            CanvasEdgeDto edge = await canvasService.CreateEdgeAsync(request.SourceNodeId, request.TargetNodeId, ct);
             return Ok(edge);
         }
         catch (ArgumentException ex)

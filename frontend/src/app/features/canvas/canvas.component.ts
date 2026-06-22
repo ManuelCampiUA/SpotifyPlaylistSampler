@@ -44,12 +44,12 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
   private readonly playlistService = inject(PlaylistService);
   private readonly snackBar = inject(MatSnackBar);
 
-  // ── Vis-Network instance ─────────────────────────────────────────────────
+  // ── Vis-Network instance 
   private network: Network | null = null;
   private readonly visNodes = new DataSet<any>();
   private readonly visEdges = new DataSet<any>();
 
-  // ── Local state mirrors (for sidebar logic) ──────────────────────────────
+  // ── Local state mirrors (for sidebar logic)
   readonly #localNodes = signal<CanvasNodeModel[]>([]);
   readonly #localEdges = signal<CanvasEdgeModel[]>([]);
 
@@ -59,12 +59,12 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
 
   readonly isLoading = this.canvasService.canvasResource.isLoading;
 
-  // ── Connect mode ─────────────────────────────────────────────────────────
+  // ── Connect mode 
   readonly connectMode = signal(false);
   readonly hasCustomEdges = computed(() => this.#localEdges().some(e => e.edgeType === 'custom'));
   private pendingSourceId: number | null = null;
 
-  // ── Library sidebar ──────────────────────────────────────────────────────
+  // ── Library sidebar
   readonly history = this.playlistService.historyResource.value;
   readonly historyLoading = this.playlistService.historyResource.isLoading;
 
@@ -83,7 +83,7 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     this.network?.destroy();
   }
 
-  // ── Vis-Network init ─────────────────────────────────────────────────────
+  // ── Vis-Network init
 
   private initNetwork(): void {
     const options: Options = {
@@ -186,7 +186,7 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  // ── State sync ────────────────────────────────────────────────────────────
+  // ── State sync
 
   private applyState(state: CanvasState): void {
     this.#localNodes.set(state.nodes);
@@ -235,7 +235,7 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     };
   }
 
-  // ── Sidebar helpers ───────────────────────────────────────────────────────
+  // ── Sidebar helpers
 
   isOnCanvas(spotifyId: string): boolean {
     return this.onCanvasPlaylistIds().has(spotifyId);
@@ -251,7 +251,7 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   addToCanvas(spotifyId: string): void {
-    this.canvasService.addPlaylist(spotifyId).subscribe({
+    this.canvasService.addPlaylistNode(spotifyId).subscribe({
       next: (state) => {
         this.applyState(state);
         const newNode = state.nodes.find(n => n.nodeType === 'playlist' && n.referenceId === spotifyId);
@@ -265,14 +265,14 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   removeFromCanvas(spotifyId: string): void {
-    this.canvasService.removePlaylist(spotifyId).subscribe({
+    this.canvasService.removePlaylistNode(spotifyId).subscribe({
       next: (state) => this.applyState(state),
       error: () =>
         this.snackBar.open('Errore durante la rimozione', 'Chiudi', { duration: 3000 }),
     });
   }
 
-  // ── Connect mode ──────────────────────────────────────────────────────────
+  // ── Connect mode
 
   toggleConnectMode(): void {
     const entering = !this.connectMode();

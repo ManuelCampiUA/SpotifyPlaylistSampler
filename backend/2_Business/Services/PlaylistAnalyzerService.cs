@@ -6,23 +6,14 @@ using backend.Business.DTOs;
 
 namespace backend.Business.Services;
 
-public partial class PlaylistAnalyzerService(
-    ISpotifyService spotifyService,
-    IPlaylistRepository repository)
+public partial class PlaylistAnalyzerService(ISpotifyService spotifyService, IPlaylistRepository repository)
 {
-    // Cache is considered fresh for 24 hours.
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(24);
-
-    // Matches: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
-    [GeneratedRegex(@"open\.spotify\.com/playlist/([A-Za-z0-9]+)")]
-    private static partial Regex PlaylistUrlRegex();
-
-    public async Task<PlaylistResultDto> AnalyzeAsync(string url, CancellationToken ct = default)
+    public async Task<PlaylistResultDto> AnalyzeAsync(string url, CancellationToken ct)
     {
         var playlistId = ExtractPlaylistId(url);
-
         var cached = await repository.GetBySpotifyIdAsync(playlistId, ct);
 
+        TimeSpan CacheTtl = TimeSpan.FromHours(1);
         if (cached is not null && DateTime.UtcNow - cached.AnalyzedAt < CacheTtl)
         {
             return JsonSerializer.Deserialize<PlaylistResultDto>(cached.ResultJson)!;
@@ -43,20 +34,25 @@ public partial class PlaylistAnalyzerService(
 
     private static string ExtractPlaylistId(string url)
     {
-        var match = PlaylistUrlRegex().Match(url);
-        if (!match.Success)
+        Regex spotifyRegex = new(@"open\.spotify\.com/playlist/([A-Za-z0-9]+)");
+        var match = spotifyRegex.Match(url);
+        if (match.Success)
+        {
+            return match.Groups[1].Value;
+        }
+        else
+        {
             throw new ArgumentException("URL Spotify non valido. Formato atteso: https://open.spotify.com/playlist/{id}");
-
-        return match.Groups[1].Value;
+        }
     }
 
-    public async Task<List<PlaylistSummaryDto>> GetHistoryAsync(CancellationToken ct = default)
+    public async Task<List<PlaylistSummaryDto>> GetHistoryAsync(CancellationToken ct)
     {
         var all = await repository.GetAllAsync(ct);
         return all.Select(p => new PlaylistSummaryDto(p.SpotifyId, p.Name, p.AnalyzedAt)).ToList();
     }
 
-    public async Task<PlaylistResultDto?> GetPlaylistAsync(string spotifyId, CancellationToken ct = default)
+    public async Task<PlaylistResultDto?> GetPlaylistAsync(string spotifyId, CancellationToken ct)
     {
         var cached = await repository.GetBySpotifyIdAsync(spotifyId, ct);
         if (cached is null) return null;

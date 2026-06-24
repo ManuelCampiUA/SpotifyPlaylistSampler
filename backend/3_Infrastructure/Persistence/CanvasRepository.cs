@@ -15,6 +15,9 @@ public class CanvasRepository(AppDbContext db) : ICanvasRepository
     public Task<CanvasNode?> GetNodeByReferenceIdAsync(string referenceId, CancellationToken ct = default)
         => db.CanvasNodes.FirstOrDefaultAsync(n => n.ReferenceId == referenceId, ct);
 
+    public Task<List<CanvasNode>> GetNodesByIdsAsync(List<int> ids, CancellationToken ct = default)
+        => db.CanvasNodes.Where(n => ids.Contains(n.Id)).ToListAsync(ct);
+
     public async Task AddNodesAsync(IEnumerable<CanvasNode> nodes, CancellationToken ct = default)
     {
         db.CanvasNodes.AddRange(nodes);
@@ -27,6 +30,12 @@ public class CanvasRepository(AppDbContext db) : ICanvasRepository
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task UpdateNodesAsync(List<CanvasNode> nodes, CancellationToken ct = default)
+    {
+        db.CanvasNodes.UpdateRange(nodes);
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task RemovePlaylistNodesAsync(string playlistSpotifyId, CancellationToken ct = default)
     {
         var nodes = await db.CanvasNodes
@@ -35,5 +44,26 @@ public class CanvasRepository(AppDbContext db) : ICanvasRepository
 
         db.CanvasNodes.RemoveRange(nodes);
         await db.SaveChangesAsync(ct);
+    }
+
+    // ── Edges
+
+    public Task<List<CanvasEdge>> GetAllEdgesAsync(CancellationToken ct = default)
+        => db.CanvasEdges.AsNoTracking().ToListAsync(ct);
+
+    public async Task AddEdgeAsync(CanvasEdge edge, CancellationToken ct = default)
+    {
+        db.CanvasEdges.Add(edge);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task RemoveEdgeAsync(int edgeId, CancellationToken ct = default)
+    {
+        var edge = await db.CanvasEdges.FindAsync([edgeId], ct);
+        if (edge is not null)
+        {
+            db.CanvasEdges.Remove(edge);
+            await db.SaveChangesAsync(ct);
+        }
     }
 }

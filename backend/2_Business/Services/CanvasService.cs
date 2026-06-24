@@ -23,7 +23,11 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
     public async Task<CanvasStateDto> GetCanvasAsync(CancellationToken ct = default)
     {
         var nodes = await canvasRepository.GetAllNodesAsync(ct);
-        return new CanvasStateDto(Nodes: [.. nodes.Select(MapNodeDto)]);
+        var edges = await canvasRepository.GetAllEdgesAsync(ct);
+        return new CanvasStateDto(
+            Nodes: [.. nodes.Select(MapNodeDto)],
+            Edges: [.. edges.Select(MapEdgeDto)]
+        );
     }
 
     public async Task<CanvasStateDto> AddPlaylistAsync(string spotifyId, CancellationToken ct = default)
@@ -31,7 +35,7 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         // Idempotency: if any block for this playlist already exists, return current state
         var all = await canvasRepository.GetAllNodesAsync(ct);
         if (all.Any(n => n.ParentPlaylistId == spotifyId))
-            return new CanvasStateDto(Nodes: [.. all.Select(MapNodeDto)]);
+            return await GetCanvasAsync(ct);
 
         PlaylistCache saved = await playlistRepository.GetBySpotifyIdAsync(spotifyId, ct)
             ?? throw new ArgumentException("Playlist non trovata. Analizzala prima dalla pagina principale.");
@@ -58,7 +62,8 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
             PositionX = CanvasPaddingX + (i % GridColumns) * BlockStepX,
             PositionY = startY + (i / GridColumns) * BlockStepY,
             Color = color,
-            ParentPlaylistId = spotifyId
+            ParentPlaylistId = spotifyId,
+            ParentPlaylistName = saved.Name
         }).ToList();
 
         await canvasRepository.AddNodesAsync(trackNodes, ct);
@@ -84,8 +89,57 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         return await GetCanvasAsync(ct);
     }
 
+    // ── Edges ──────────────────────────────────────────────────────
+
+    public async Task<CanvasEdgeDto> CreateEdgeAsync(int sourceNodeId, int targetNodeId, CancellationToken ct = default)
+    {
+        var source = await canvasRepository.GetNodeByIdAsync(sourceNodeId, ct)
+            ?? throw new ArgumentException("Nodo sorgente non trovato.");
+        var target = await canvasRepository.GetNodeByIdAsync(targetNodeId, ct)
+            ?? throw new ArgumentException("Nodo destinazione non trovato.");
+
+        var edge = new CanvasEdge
+        {
+            SourceNodeId = sourceNodeId,
+            TargetNodeId = targetNodeId,
+            EdgeType = "bridge"
+        };
+
+        await canvasRepository.AddEdgeAsync(edge, ct);
+        return MapEdgeDto(edge);
+    }
+
+    public async Task RemoveEdgeAsync(int edgeId, CancellationToken ct = default)
+    {
+        await canvasRepository.RemoveEdgeAsync(edgeId, ct);
+    }
+
+    // ── Batch position save ────────────────────────────────────────
+
+    public async Task BatchUpdatePositionsAsync(List<UpdateNodePositionBatchItemDto> items, CancellationToken ct = default)
+    {
+        var ids = items.Select(i => i.Id).ToList();
+        var nodes = await canvasRepository.GetNodesByIdsAsync(ids, ct);
+        var lookup = items.ToDictionary(i => i.Id);
+
+        foreach (var node in nodes)
+        {
+            if (lookup.TryGetValue(node.Id, out var update))
+            {
+                node.PositionX = update.PositionX;
+                node.PositionY = update.PositionY;
+            }
+        }
+
+        await canvasRepository.UpdateNodesAsync(nodes, ct);
+    }
+
     private static CanvasNodeDto MapNodeDto(CanvasNode n) => new(
         n.Id, n.NodeType, n.ReferenceId, n.Label, n.Artist,
-        n.PositionX, n.PositionY, n.Color, n.ParentPlaylistId
+        n.PositionX, n.PositionY, n.Color, n.ParentPlaylistId, n.ParentPlaylistName
+    );
+
+    private static CanvasEdgeDto MapEdgeDto(CanvasEdge e) => new(
+        e.Id, e.SourceNodeId, e.TargetNodeId, e.EdgeType
     );
 }

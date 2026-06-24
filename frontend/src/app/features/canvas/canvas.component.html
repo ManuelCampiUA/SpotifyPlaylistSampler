@@ -9,7 +9,37 @@
       <mat-icon>dashboard</mat-icon>
       Canvas Playlist
     </span>
+
+    <div class="canvas-toolbar__actions">
+      <button
+        mat-icon-button
+        [class.active]="bridgeMode()"
+        (click)="toggleBridgeMode()"
+        [matTooltip]="bridgeMode() ? 'Esci modalità ponte' : 'Crea ponte tra brani'"
+      >
+        <mat-icon>{{ bridgeMode() ? 'close' : 'share' }}</mat-icon>
+      </button>
+
+      <button
+        mat-icon-button
+        (click)="savePositions()"
+        [disabled]="!hasUnsavedChanges()"
+        matTooltip="Salva posizioni"
+      >
+        <mat-icon>save</mat-icon>
+      </button>
+    </div>
   </header>
+
+  @if (bridgeMode()) {
+    <div class="bridge-hint">
+      @if (!bridgeSource()) {
+        Seleziona il primo brano del ponte
+      } @else {
+        Seleziona il secondo brano — <strong>{{ bridgeSource()!.label }}</strong> → ?
+      }
+    </div>
+  }
 
   @if (isLoading()) {
     <mat-progress-bar mode="indeterminate" />
@@ -71,27 +101,78 @@
     </aside>
 
     <!-- CANVAS AREA -->
-    <div class="canvas-area" cdkDropList [cdkDropListSortingDisabled]="true">
+    <div
+      class="canvas-area"
+      #canvasArea
+      [class.bridge-mode]="bridgeMode()"
+      (pointerdown)="onCanvasPointerDown($event)"
+      (pointermove)="onCanvasPointerMove($event)"
+      (pointerup)="onCanvasPointerUp($event)"
+    >
 
-      @if (!isLoading() && blocks().length === 0) {
+      @if (!isLoading() && nodes().length === 0) {
         <div class="canvas-empty-hint">
           <mat-icon>dashboard</mat-icon>
           <p>Aggiungi una playlist dalla barra laterale</p>
         </div>
       }
 
-      @for (block of blocks(); track block.id) {
-        <div
-          class="track-block"
-          cdkDrag
-          [style.left.px]="block.positionX"
-          [style.top.px]="block.positionY"
-          [style.background-color]="block.color"
-          [matTooltip]="block.label"
-          matTooltipPosition="above"
-          (cdkDragEnded)="onDragEnded($event, block)"
-        ></div>
-      }
+      <!-- Transformed world layer -->
+      <div class="canvas-world" [style.transform]="transformStyle()">
+
+        <!-- SVG layer for edges -->
+        <svg class="edge-layer">
+          @for (edge of edgeLines(); track edge.id) {
+            <line
+              class="edge-line"
+              [attr.x1]="edge.x1"
+              [attr.y1]="edge.y1"
+              [attr.x2]="edge.x2"
+              [attr.y2]="edge.y2"
+            />
+            <!-- Invisible wider line for easier clicking -->
+            <line
+              class="edge-line-hitbox"
+              [attr.x1]="edge.x1"
+              [attr.y1]="edge.y1"
+              [attr.x2]="edge.x2"
+              [attr.y2]="edge.y2"
+              (click)="onEdgeClick(edge.id)"
+            />
+          }
+        </svg>
+
+        <!-- Cluster labels -->
+        @for (cl of clusterLabels(); track cl.name) {
+          <div
+            class="cluster-label"
+            [style.left.px]="cl.x"
+            [style.top.px]="cl.y"
+            [style.color]="cl.color"
+          >
+            {{ cl.name }}
+          </div>
+        }
+
+        <!-- Track nodes -->
+        @for (node of nodes(); track trackById($index, node)) {
+          <div
+            class="track-block"
+            [class.bridge-source]="bridgeSource()?.id === node.id"
+            [style.left.px]="(node.x ?? 0) - NODE_WIDTH / 2"
+            [style.top.px]="(node.y ?? 0) - NODE_HEIGHT / 2"
+            [style.width.px]="NODE_WIDTH"
+            [style.height.px]="NODE_HEIGHT"
+            [style.background-color]="node.color"
+            (pointerdown)="onNodePointerDown($event, node)"
+            (click)="onNodeClick(node)"
+          >
+            <span class="track-block__name">{{ node.label }}</span>
+            <span class="track-block__artist">{{ node.artist }}</span>
+          </div>
+        }
+
+      </div>
 
     </div>
 

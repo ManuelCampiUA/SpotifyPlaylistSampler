@@ -50,4 +50,36 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
             return NotFound(ex.Message);
         }
     }
+
+    [HttpPut("nodes/batch")]
+    public async Task<IActionResult> BatchUpdatePositions(
+        [FromBody] List<UpdateNodePositionBatchItemDto> items, CancellationToken ct)
+    {
+        await canvasService.BatchUpdatePositionsAsync(items, ct);
+        return NoContent();
+    }
+
+    // ── Edges ─────────────────────────────────────────────────────
+
+    [HttpPost("edges")]
+    public async Task<ActionResult<CanvasEdgeDto>> CreateEdge(
+        [FromBody] CreateEdgeRequestDto request, CancellationToken ct)
+    {
+        try
+        {
+            var edge = await canvasService.CreateEdgeAsync(request.SourceNodeId, request.TargetNodeId, ct);
+            return Ok(edge);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("edges/{id:int}")]
+    public async Task<IActionResult> RemoveEdge(int id, CancellationToken ct)
+    {
+        await canvasService.RemoveEdgeAsync(id, ct);
+        return NoContent();
+    }
 }

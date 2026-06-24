@@ -19,13 +19,15 @@ html {
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  height: 100vh;
   font-family: Roboto, 'Helvetica Neue', sans-serif;
   background-color: #0d0d0d;
   color: #e8e8e8;
-  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
 }
 
 :root {

@@ -17,4 +17,5 @@ public class CanvasNode
     public double PositionY { get; set; }
     public string? Color { get; set; }
     public string? ParentPlaylistId { get; set; }
+    public string? ParentPlaylistName { get; set; }
 }

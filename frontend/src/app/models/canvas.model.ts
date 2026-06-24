@@ -4,6 +4,7 @@ export interface CanvasNodeModel {
   referenceId: string;
   label: string;
   artist?: string;
+  imageUrl?: string;
   positionX: number;
   positionY: number;
   color?: string;

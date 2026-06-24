@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, resource, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Observable } from 'rxjs';
 import { PlaylistResult, PlaylistSummary } from '../models/playlist.model';
 
 type PlaylistRequest =
@@ -61,5 +61,10 @@ export class PlaylistService {
         this.historyResource.reload();
       }
     });
+  }
+
+  // ── Direct fetch for canvas sidebar
+  getPlaylistResult(spotifyId: string): Observable<PlaylistResult> {
+    return this.#http.get<PlaylistResult>(`/api/playlist/${spotifyId}`);
   }
 }

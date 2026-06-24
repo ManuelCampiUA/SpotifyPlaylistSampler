@@ -16,12 +16,12 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
     }
 
     [HttpPost("playlist")]
-    public async Task<ActionResult<CanvasStateDto>> AddPlaylist([FromBody] AddPlaylistToCanvasRequestDto request, CancellationToken ct)
+    public async Task<ActionResult<CanvasNodeDto>> AddPlaylist([FromBody] AddPlaylistToCanvasRequestDto request, CancellationToken ct)
     {
         try
         {
-            CanvasStateDto state = await canvasService.AddPlaylistAsync(request.SpotifyId, ct);
-            return Ok(state);
+            var node = await canvasService.AddPlaylistAsync(request.SpotifyId, ct);
+            return Ok(node);
         }
         catch (ArgumentException ex)
         {
@@ -29,10 +29,24 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
         }
     }
 
-    [HttpDelete("playlist/{spotifyId}")]
-    public async Task<IActionResult> RemovePlaylist(string spotifyId, CancellationToken ct)
+    [HttpPost("track")]
+    public async Task<ActionResult<CanvasNodeDto>> AddTrack([FromBody] AddTrackToCanvasRequestDto request, CancellationToken ct)
     {
-        await canvasService.RemovePlaylistAsync(spotifyId, ct);
+        try
+        {
+            var node = await canvasService.AddTrackAsync(request.SpotifyId, request.TrackIndex, ct);
+            return Ok(node);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("nodes/{id:int}")]
+    public async Task<IActionResult> RemoveNode(int id, CancellationToken ct)
+    {
+        await canvasService.RemoveNodeAsync(id, ct);
         return NoContent();
     }
 

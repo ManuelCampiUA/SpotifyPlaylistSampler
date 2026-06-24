@@ -18,6 +18,12 @@ public class CanvasRepository(AppDbContext db) : ICanvasRepository
     public Task<List<CanvasNode>> GetNodesByIdsAsync(List<int> ids, CancellationToken ct = default)
         => db.CanvasNodes.Where(n => ids.Contains(n.Id)).ToListAsync(ct);
 
+    public async Task AddNodeAsync(CanvasNode node, CancellationToken ct = default)
+    {
+        db.CanvasNodes.Add(node);
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task AddNodesAsync(IEnumerable<CanvasNode> nodes, CancellationToken ct = default)
     {
         db.CanvasNodes.AddRange(nodes);
@@ -34,6 +40,16 @@ public class CanvasRepository(AppDbContext db) : ICanvasRepository
     {
         db.CanvasNodes.UpdateRange(nodes);
         await db.SaveChangesAsync(ct);
+    }
+
+    public async Task RemoveNodeAsync(int nodeId, CancellationToken ct = default)
+    {
+        var node = await db.CanvasNodes.FindAsync([nodeId], ct);
+        if (node is not null)
+        {
+            db.CanvasNodes.Remove(node);
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     public async Task RemovePlaylistNodesAsync(string playlistSpotifyId, CancellationToken ct = default)

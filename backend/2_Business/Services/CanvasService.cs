@@ -13,12 +13,8 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         "#00BCD4", "#FF5722", "#3F51B5", "#CDDC39", "#607D8B"
     ];
 
-    private const int GridColumns = 5;
-    private const double BlockStepX = 180.0; // block width (160) + gap (20)
-    private const double BlockStepY = 104.0; // block height (~64) + gap (40)
-    private const double CanvasPaddingX = 40.0;
-    private const double CanvasPaddingY = 40.0;
-    private const double PlaylistGroupPadding = 60.0;
+    private const double DefaultSpawnX = 400.0;
+    private const double DefaultSpawnY = 300.0;
 
     public async Task<CanvasStateDto> GetCanvasAsync(CancellationToken ct = default)
     {
@@ -30,45 +26,80 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         );
     }
 
-    public async Task<CanvasStateDto> AddPlaylistAsync(string spotifyId, CancellationToken ct = default)
+    /// <summary>Add a single playlist-type block to the canvas.</summary>
+    public async Task<CanvasNodeDto> AddPlaylistAsync(string spotifyId, CancellationToken ct = default)
     {
-        // Idempotency: if any block for this playlist already exists, return current state
-        var all = await canvasRepository.GetAllNodesAsync(ct);
-        if (all.Any(n => n.ParentPlaylistId == spotifyId))
-            return await GetCanvasAsync(ct);
+        // Idempotency check
+        var existing = await canvasRepository.GetNodeByReferenceIdAsync($"playlist:{spotifyId}", ct);
+        if (existing is not null) return MapNodeDto(existing);
 
         PlaylistCache saved = await playlistRepository.GetBySpotifyIdAsync(spotifyId, ct)
             ?? throw new ArgumentException("Playlist non trovata. Analizzala prima dalla pagina principale.");
 
         PlaylistResultDto result = JsonSerializer.Deserialize<PlaylistResultDto>(saved.ResultJson)!;
 
-        // Assign color cycling through palette based on distinct playlists already on canvas
-        int playlistCount = all.Select(n => n.ParentPlaylistId).Distinct().Count(id => id is not null);
+        var all = await canvasRepository.GetAllNodesAsync(ct);
+        int playlistCount = all.Count(n => n.NodeType == "playlist");
         string color = Palette[playlistCount % Palette.Length];
 
-        // Start new playlist blocks below all existing ones
-        int existingCount = all.Count;
-        int existingRows = (int)Math.Ceiling(existingCount / (double)GridColumns);
-        double startY = existingRows > 0
-            ? CanvasPaddingY + existingRows * BlockStepY + PlaylistGroupPadding
-            : CanvasPaddingY;
-
-        var trackNodes = result.Tracks.Select((track, i) => new CanvasNode
+        var node = new CanvasNode
         {
-            NodeType = "track",
-            ReferenceId = $"{spotifyId}:{i}",
-            Label = track.Name,
-            Artist = track.Artists.FirstOrDefault() ?? string.Empty,
-            PositionX = CanvasPaddingX + (i % GridColumns) * BlockStepX,
-            PositionY = startY + (i / GridColumns) * BlockStepY,
+            NodeType = "playlist",
+            ReferenceId = $"playlist:{spotifyId}",
+            Label = saved.Name,
+            ImageUrl = result.ImageUrl,
+            PositionX = DefaultSpawnX + playlistCount * 60,
+            PositionY = DefaultSpawnY + playlistCount * 40,
             Color = color,
             ParentPlaylistId = spotifyId,
             ParentPlaylistName = saved.Name
-        }).ToList();
+        };
 
-        await canvasRepository.AddNodesAsync(trackNodes, ct);
+        await canvasRepository.AddNodeAsync(node, ct);
+        return MapNodeDto(node);
+    }
 
-        return await GetCanvasAsync(ct);
+    /// <summary>Add a single track-type block to the canvas.</summary>
+    public async Task<CanvasNodeDto> AddTrackAsync(string spotifyId, int trackIndex, CancellationToken ct = default)
+    {
+        string refId = $"{spotifyId}:{trackIndex}";
+
+        // Idempotency check
+        var existing = await canvasRepository.GetNodeByReferenceIdAsync(refId, ct);
+        if (existing is not null) return MapNodeDto(existing);
+
+        PlaylistCache saved = await playlistRepository.GetBySpotifyIdAsync(spotifyId, ct)
+            ?? throw new ArgumentException("Playlist non trovata.");
+
+        PlaylistResultDto result = JsonSerializer.Deserialize<PlaylistResultDto>(saved.ResultJson)!;
+
+        if (trackIndex < 0 || trackIndex >= result.Tracks.Count)
+            throw new ArgumentException("Indice traccia non valido.");
+
+        var track = result.Tracks[trackIndex];
+
+        // Get color from existing playlist node, or assign new
+        var playlistNode = await canvasRepository.GetNodeByReferenceIdAsync($"playlist:{spotifyId}", ct);
+        string color = playlistNode?.Color ?? Palette[0];
+
+        var all = await canvasRepository.GetAllNodesAsync(ct);
+        int count = all.Count;
+
+        var node = new CanvasNode
+        {
+            NodeType = "track",
+            ReferenceId = refId,
+            Label = track.Name,
+            Artist = track.Artists.FirstOrDefault() ?? string.Empty,
+            PositionX = DefaultSpawnX + 200 + (count % 5) * 50,
+            PositionY = DefaultSpawnY + (count / 5) * 60,
+            Color = color,
+            ParentPlaylistId = spotifyId,
+            ParentPlaylistName = saved.Name
+        };
+
+        await canvasRepository.AddNodeAsync(node, ct);
+        return MapNodeDto(node);
     }
 
     public async Task<CanvasNodeDto> UpdateNodePositionAsync(int nodeId, double x, double y, CancellationToken ct = default)
@@ -83,10 +114,9 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         return MapNodeDto(node);
     }
 
-    public async Task<CanvasStateDto> RemovePlaylistAsync(string spotifyId, CancellationToken ct = default)
+    public async Task RemoveNodeAsync(int nodeId, CancellationToken ct = default)
     {
-        await canvasRepository.RemovePlaylistNodesAsync(spotifyId, ct);
-        return await GetCanvasAsync(ct);
+        await canvasRepository.RemoveNodeAsync(nodeId, ct);
     }
 
     // ── Edges ──────────────────────────────────────────────────────
@@ -135,7 +165,7 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
     }
 
     private static CanvasNodeDto MapNodeDto(CanvasNode n) => new(
-        n.Id, n.NodeType, n.ReferenceId, n.Label, n.Artist,
+        n.Id, n.NodeType, n.ReferenceId, n.Label, n.Artist, n.ImageUrl,
         n.PositionX, n.PositionY, n.Color, n.ParentPlaylistId, n.ParentPlaylistName
     );
 

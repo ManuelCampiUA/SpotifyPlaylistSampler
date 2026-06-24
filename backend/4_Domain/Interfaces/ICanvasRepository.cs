@@ -10,12 +10,13 @@ public interface ICanvasRepository
     Task<CanvasNode?> GetNodeByReferenceIdAsync(string referenceId, CancellationToken ct = default);
     Task<List<CanvasNode>> GetNodesByIdsAsync(List<int> ids, CancellationToken ct = default);
 
+    Task AddNodeAsync(CanvasNode node, CancellationToken ct = default);
     Task AddNodesAsync(IEnumerable<CanvasNode> nodes, CancellationToken ct = default);
 
     Task UpdateNodeAsync(CanvasNode node, CancellationToken ct = default);
     Task UpdateNodesAsync(List<CanvasNode> nodes, CancellationToken ct = default);
 
-    /// <summary>Removes all nodes belonging to a playlist and their related edges (cascade via FK).</summary>
+    Task RemoveNodeAsync(int nodeId, CancellationToken ct = default);
     Task RemovePlaylistNodesAsync(string playlistSpotifyId, CancellationToken ct = default);
 
     // ── Edges

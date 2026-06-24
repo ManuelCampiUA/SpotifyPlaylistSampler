@@ -6,6 +6,7 @@ public record CanvasNodeDto(
     string ReferenceId,
     string Label,
     string? Artist,
+    string? ImageUrl,
     double PositionX,
     double PositionY,
     string? Color,
@@ -25,10 +26,12 @@ public record CanvasStateDto(
     List<CanvasEdgeDto> Edges
 );
 
-public record CreateEdgeRequestDto(int SourceNodeId, int TargetNodeId);
-
-public record UpdateNodePositionBatchItemDto(int Id, double PositionX, double PositionY);
-
 public record AddPlaylistToCanvasRequestDto(string SpotifyId);
 
+public record AddTrackToCanvasRequestDto(string SpotifyId, int TrackIndex);
+
+public record CreateEdgeRequestDto(int SourceNodeId, int TargetNodeId);
+
 public record UpdateNodePositionDto(double PositionX, double PositionY);
+
+public record UpdateNodePositionBatchItemDto(int Id, double PositionX, double PositionY);

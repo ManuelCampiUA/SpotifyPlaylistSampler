@@ -7,7 +7,7 @@
     </button>
     <span class="canvas-toolbar__title">
       <mat-icon>dashboard</mat-icon>
-      Canvas Playlist
+      Canvas
     </span>
 
     <div class="canvas-toolbar__actions">
@@ -15,7 +15,7 @@
         mat-icon-button
         [class.active]="bridgeMode()"
         (click)="toggleBridgeMode()"
-        [matTooltip]="bridgeMode() ? 'Esci modalità ponte' : 'Crea ponte tra brani'"
+        [matTooltip]="bridgeMode() ? 'Esci modalità collegamento' : 'Collega nodi'"
       >
         <mat-icon>{{ bridgeMode() ? 'close' : 'share' }}</mat-icon>
       </button>
@@ -34,9 +34,9 @@
   @if (bridgeMode()) {
     <div class="bridge-hint">
       @if (!bridgeSource()) {
-        Seleziona il primo brano del ponte
+        Clicca il primo nodo da collegare
       } @else {
-        Seleziona il secondo brano — <strong>{{ bridgeSource()!.label }}</strong> → ?
+        Clicca il secondo nodo — <strong>{{ bridgeSource()!.label }}</strong> → ?
       }
     </div>
   }
@@ -62,32 +62,52 @@
       @if (history()?.length) {
         <ul class="playlist-list">
           @for (p of history()!; track p.spotifyId) {
-            <li class="playlist-item" [class.playlist-item--on-canvas]="isOnCanvas(p.spotifyId)">
-              <div class="playlist-item__info">
-                <span
-                  class="playlist-item__dot"
-                  [style.background-color]="isOnCanvas(p.spotifyId) ? getPlaylistColor(p.spotifyId) : '#444'"
-                ></span>
-                <span class="playlist-item__name">{{ displayName(p) }}</span>
-              </div>
-              @if (isOnCanvas(p.spotifyId)) {
+            <li class="playlist-item">
+              <!-- Playlist header row -->
+              <div class="playlist-item__row">
                 <button
-                  mat-icon-button
-                  class="sidebar-action-btn--remove"
-                  (click)="removeFromCanvas(p.spotifyId)"
-                  matTooltip="Rimuovi dalla canvas"
+                  class="playlist-item__expand"
+                  (click)="togglePlaylistExpand(p)"
                 >
-                  <mat-icon>remove_circle_outline</mat-icon>
+                  <mat-icon>{{ expandedPlaylistId() === p.spotifyId ? 'expand_less' : 'expand_more' }}</mat-icon>
                 </button>
-              } @else {
+                <span class="playlist-item__name" (click)="togglePlaylistExpand(p)">
+                  {{ displayName(p) }}
+                </span>
                 <button
                   mat-icon-button
                   class="sidebar-action-btn--add"
-                  (click)="addToCanvas(p.spotifyId)"
-                  matTooltip="Aggiungi a canvas"
+                  (click)="addPlaylistToCanvas(p.spotifyId)"
+                  matTooltip="Aggiungi blocco playlist"
+                  [disabled]="isNodeOnCanvas('playlist:' + p.spotifyId)"
                 >
-                  <mat-icon>add_circle_outline</mat-icon>
+                  <mat-icon>add_box</mat-icon>
                 </button>
+              </div>
+
+              <!-- Expanded track list -->
+              @if (expandedPlaylistId() === p.spotifyId) {
+                <div class="playlist-item__tracks">
+                  @if (expandedPlaylistLoading()) {
+                    <mat-progress-bar mode="indeterminate" />
+                  } @else {
+                    @for (track of expandedPlaylistTracks(); track $index) {
+                      <div class="track-list-item">
+                        <span class="track-list-item__name">{{ track.name }}</span>
+                        <span class="track-list-item__artist">{{ track.artists[0] }}</span>
+                        <button
+                          mat-icon-button
+                          class="track-list-item__add"
+                          (click)="addTrackToCanvas(p.spotifyId, $index)"
+                          matTooltip="Aggiungi al canvas"
+                          [disabled]="isNodeOnCanvas(p.spotifyId + ':' + $index)"
+                        >
+                          <mat-icon>add_circle_outline</mat-icon>
+                        </button>
+                      </div>
+                    }
+                  }
+                </div>
               }
             </li>
           }
@@ -113,7 +133,7 @@
       @if (!isLoading() && nodes().length === 0) {
         <div class="canvas-empty-hint">
           <mat-icon>dashboard</mat-icon>
-          <p>Aggiungi una playlist dalla barra laterale</p>
+          <p>Aggiungi playlist o brani dalla barra laterale</p>
         </div>
       }
 
@@ -130,7 +150,6 @@
               [attr.x2]="edge.x2"
               [attr.y2]="edge.y2"
             />
-            <!-- Invisible wider line for easier clicking -->
             <line
               class="edge-line-hitbox"
               [attr.x1]="edge.x1"
@@ -142,34 +161,45 @@
           }
         </svg>
 
-        <!-- Cluster labels -->
-        @for (cl of clusterLabels(); track cl.name) {
-          <div
-            class="cluster-label"
-            [style.left.px]="cl.x"
-            [style.top.px]="cl.y"
-            [style.color]="cl.color"
-          >
-            {{ cl.name }}
-          </div>
-        }
-
-        <!-- Track nodes -->
+        <!-- Canvas nodes -->
         @for (node of nodes(); track trackById($index, node)) {
-          <div
-            class="track-block"
-            [class.bridge-source]="bridgeSource()?.id === node.id"
-            [style.left.px]="(node.x ?? 0) - NODE_WIDTH / 2"
-            [style.top.px]="(node.y ?? 0) - NODE_HEIGHT / 2"
-            [style.width.px]="NODE_WIDTH"
-            [style.height.px]="NODE_HEIGHT"
-            [style.background-color]="node.color"
-            (pointerdown)="onNodePointerDown($event, node)"
-            (click)="onNodeClick(node)"
-          >
-            <span class="track-block__name">{{ node.label }}</span>
-            <span class="track-block__artist">{{ node.artist }}</span>
-          </div>
+          @if (node.nodeType === 'playlist') {
+            <!-- Playlist block -->
+            <div
+              class="canvas-node canvas-node--playlist"
+              [class.bridge-source]="bridgeSource()?.id === node.id"
+              [style.left.px]="node.positionX"
+              [style.top.px]="node.positionY"
+              [style.width.px]="NODE_WIDTH_PLAYLIST"
+              [style.height.px]="NODE_HEIGHT_PLAYLIST"
+              [style.border-color]="node.color"
+              (pointerdown)="onNodePointerDown($event, node)"
+              (click)="onNodeClick(node)"
+              (contextmenu)="onNodeRightClick($event, node)"
+            >
+              @if (node.imageUrl) {
+                <img class="canvas-node__cover" [src]="node.imageUrl" alt="" />
+              }
+              <span class="canvas-node__label">{{ node.label }}</span>
+            </div>
+          } @else {
+            <!-- Track block -->
+            <div
+              class="canvas-node canvas-node--track"
+              [class.bridge-source]="bridgeSource()?.id === node.id"
+              [style.left.px]="node.positionX"
+              [style.top.px]="node.positionY"
+              [style.width.px]="NODE_WIDTH_TRACK"
+              [style.height.px]="NODE_HEIGHT_TRACK"
+              [style.background-color]="node.color"
+              (pointerdown)="onNodePointerDown($event, node)"
+              (click)="onNodeClick(node)"
+              (contextmenu)="onNodeRightClick($event, node)"
+            >
+              <span class="canvas-node__name">{{ node.label }}</span>
+              <span class="canvas-node__artist">{{ node.artist }}</span>
+            </div>
+          }
         }
 
       </div>

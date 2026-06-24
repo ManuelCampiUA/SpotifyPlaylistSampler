@@ -18,6 +18,7 @@ public interface ICanvasRepository
 
     Task RemoveNodeAsync(int nodeId, CancellationToken ct = default);
     Task RemovePlaylistNodesAsync(string playlistSpotifyId, CancellationToken ct = default);
+    Task ClearAllAsync(CancellationToken ct = default);
 
     // ── Edges
     Task<List<CanvasEdge>> GetAllEdgesAsync(CancellationToken ct = default);

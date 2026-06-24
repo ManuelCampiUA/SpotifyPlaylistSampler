@@ -52,4 +52,8 @@ export class CanvasService {
   removeEdge(edgeId: number): Observable<void> {
     return this.#http.delete<void>(`/api/canvas/edges/${edgeId}`);
   }
+
+  clearAll(): Observable<void> {
+    return this.#http.delete<void>('/api/canvas/clear');
+  }
 }

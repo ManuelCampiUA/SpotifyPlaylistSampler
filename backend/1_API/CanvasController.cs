@@ -73,6 +73,13 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("clear")]
+    public async Task<IActionResult> ClearAll(CancellationToken ct)
+    {
+        await canvasService.ClearAllAsync(ct);
+        return NoContent();
+    }
+
     // ── Edges ─────────────────────────────────────────────────────
 
     [HttpPost("edges")]

@@ -119,6 +119,11 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         await canvasRepository.RemoveNodeAsync(nodeId, ct);
     }
 
+    public async Task ClearAllAsync(CancellationToken ct = default)
+    {
+        await canvasRepository.ClearAllAsync(ct);
+    }
+
     // ── Edges ──────────────────────────────────────────────────────
 
     public async Task<CanvasEdgeDto> CreateEdgeAsync(int sourceNodeId, int targetNodeId, CancellationToken ct = default)

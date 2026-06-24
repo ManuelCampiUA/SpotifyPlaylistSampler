@@ -62,6 +62,13 @@ public class CanvasRepository(AppDbContext db) : ICanvasRepository
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task ClearAllAsync(CancellationToken ct = default)
+    {
+        db.CanvasEdges.RemoveRange(db.CanvasEdges);
+        db.CanvasNodes.RemoveRange(db.CanvasNodes);
+        await db.SaveChangesAsync(ct);
+    }
+
     // ── Edges
 
     public Task<List<CanvasEdge>> GetAllEdgesAsync(CancellationToken ct = default)

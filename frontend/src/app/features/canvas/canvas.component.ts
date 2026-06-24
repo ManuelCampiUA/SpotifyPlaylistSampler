@@ -299,6 +299,22 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  // ── Clear all ───────────────────────────────────────────────────
+
+  clearCanvas(): void {
+    if (!confirm('Sei sicuro? Verranno rimossi tutti i nodi e i collegamenti.')) return;
+
+    this.canvasService.clearAll().subscribe({
+      next: () => {
+        this.nodes.set([]);
+        this.edges.set([]);
+        this.hasUnsavedChanges.set(false);
+        this.snackBar.open('Canvas pulita!', '', { duration: 1500 });
+      },
+      error: () => this.snackBar.open('Errore nella pulizia', 'Chiudi', { duration: 3000 }),
+    });
+  }
+
   // ── Sidebar: Add playlist block ────────────────────────────────
 
   addPlaylistToCanvas(spotifyId: string): void {

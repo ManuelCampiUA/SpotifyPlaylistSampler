@@ -16,8 +16,9 @@ public record PlaylistResultDto(
 
 public record PlaylistSummaryDto(
     string SpotifyId,
-    string Name,
-    DateTime AnalyzedAt
+    string PlaylistName,
+    int TotalTracks,
+    string? ImageUrl
 );
 
 public record TrackDto(

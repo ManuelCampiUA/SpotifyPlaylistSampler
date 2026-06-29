@@ -49,7 +49,16 @@ public partial class PlaylistAnalyzerService(ISpotifyService spotifyService, IPl
     public async Task<List<PlaylistSummaryDto>> GetHistoryAsync(CancellationToken ct)
     {
         var all = await repository.GetAllAsync(ct);
-        return all.Select(p => new PlaylistSummaryDto(p.SpotifyId, p.Name, p.AnalyzedAt)).ToList();
+        return all.Select(p =>
+        {
+            var result = JsonSerializer.Deserialize<PlaylistResultDto>(p.ResultJson);
+            return new PlaylistSummaryDto(
+                p.SpotifyId,
+                result?.PlaylistName ?? p.Name,
+                result?.TotalTracks ?? 0,
+                result?.ImageUrl
+            );
+        }).ToList();
     }
 
     public async Task<PlaylistResultDto?> GetPlaylistAsync(string spotifyId, CancellationToken ct)

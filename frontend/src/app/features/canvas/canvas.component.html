@@ -145,29 +145,33 @@
         </div>
       }
 
+      <!-- SVG edge overlay (screen-space, above world) -->
+      <svg class="edge-layer">
+        @for (edge of screenEdges(); track edge.id) {
+          <line
+            [attr.x1]="edge.x1"
+            [attr.y1]="edge.y1"
+            [attr.x2]="edge.x2"
+            [attr.y2]="edge.y2"
+            stroke="transparent"
+            stroke-width="16"
+            style="cursor:pointer"
+            (click)="onEdgeClick(edge.id)"
+          />
+          <line
+            [attr.x1]="edge.x1"
+            [attr.y1]="edge.y1"
+            [attr.x2]="edge.x2"
+            [attr.y2]="edge.y2"
+            stroke="white"
+            stroke-width="2"
+            style="pointer-events:none"
+          />
+        }
+      </svg>
+
       <!-- Transformed world layer -->
       <div class="canvas-world" [style.transform]="transformStyle()">
-
-        <!-- SVG layer for edges -->
-        <svg class="edge-layer">
-          @for (edge of edgeLines(); track edge.id) {
-            <line
-              class="edge-line"
-              [attr.x1]="edge.x1"
-              [attr.y1]="edge.y1"
-              [attr.x2]="edge.x2"
-              [attr.y2]="edge.y2"
-            />
-            <line
-              class="edge-line-hitbox"
-              [attr.x1]="edge.x1"
-              [attr.y1]="edge.y1"
-              [attr.x2]="edge.x2"
-              [attr.y2]="edge.y2"
-              (click)="onEdgeClick(edge.id)"
-            />
-          }
-        </svg>
 
         <!-- Canvas nodes -->
         @for (node of nodes(); track trackById($index, node)) {

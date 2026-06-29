@@ -78,7 +78,7 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
   readonly bridgeSource = signal<CanvasNodeModel | null>(null);
   readonly hasUnsavedChanges = signal(false);
 
-  // ── Edge lines (computed for SVG rendering)
+  // ── Edge lines in world coords
   readonly edgeLines = computed(() => {
     const n = this.nodes();
     const nodeMap = new Map(n.map(node => [node.id, node]));
@@ -94,6 +94,20 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
         y2: tgt.positionY + this.getNodeHeight(tgt) / 2,
       };
     }).filter(Boolean) as { id: number; x1: number; y1: number; x2: number; y2: number }[];
+  });
+
+  // ── Edge lines transformed to screen coords (for SVG overlay)
+  readonly screenEdges = computed(() => {
+    const z = this.zoom();
+    const px = this.panX();
+    const py = this.panY();
+    return this.edgeLines().map(e => ({
+      id: e.id,
+      x1: e.x1 * z + px,
+      y1: e.y1 * z + py,
+      x2: e.x2 * z + px,
+      y2: e.y2 * z + py,
+    }));
   });
 
   readonly isLoading = this.canvasService.canvasResource.isLoading;

@@ -11,10 +11,7 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
     {
         var client = BuildClient();
 
-        // 1. Fetch playlist metadata + first page of tracks
         var playlist = await client.Playlists.Get(playlistId, ct);
-
-        // 2. Paginate through ALL tracks (handles playlists > 100 items)
         var allItems = await client.PaginateAll(playlist.Items!, cancellationToken: ct);
 
         var tracks = allItems
@@ -22,7 +19,6 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
             .OfType<FullTrack>()
             .ToList();
 
-        // 3. Collect unique artist IDs across all tracks
         var artistIds = tracks
             .SelectMany(t => t.Artists)
             .Select(a => a.Id)
@@ -30,8 +26,6 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
             .Distinct()
             .ToList();
 
-        // 4. Fetch full artist details individually (batch endpoint removed by Spotify).
-        //    Tasks run concurrently, capped at 10 parallel requests to respect rate limits.
         var fullArtists = new List<FullArtist>();
         foreach (var batch in artistIds.Chunk(10))
         {
@@ -40,15 +34,12 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
             fullArtists.AddRange(results.Where(a => a is not null));
         }
 
-
-        // 5. Collect all unique genres across the entire playlist
         var allGenres = fullArtists
             .SelectMany(a => a.Genres ?? [])
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(g => g)
             .ToList();
 
-        // 6. Map to DTOs
         var trackDtos = tracks.Select(t => new TrackDto(
             Name: t.Name,
             Artists: [.. t.Artists.Select(a => a.Name)],

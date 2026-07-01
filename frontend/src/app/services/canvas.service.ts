@@ -17,8 +17,6 @@ export class CanvasService {
     this.#refreshTrigger.update(v => v + 1);
   }
 
-  // ── Add nodes
-
   addPlaylistNode(spotifyId: string): Observable<CanvasNodeModel> {
     return this.#http.post<CanvasNodeModel>('/api/canvas/playlist', { spotifyId });
   }
@@ -27,13 +25,9 @@ export class CanvasService {
     return this.#http.post<CanvasNodeModel>('/api/canvas/track', { spotifyId, trackIndex });
   }
 
-  // ── Remove node
-
   removeNode(nodeId: number): Observable<void> {
     return this.#http.delete<void>(`/api/canvas/nodes/${nodeId}`);
   }
-
-  // ── Position
 
   updateNodePosition(id: number, positionX: number, positionY: number): Observable<CanvasNodeModel> {
     return this.#http.put<CanvasNodeModel>(`/api/canvas/nodes/${id}`, { positionX, positionY });
@@ -42,8 +36,6 @@ export class CanvasService {
   batchUpdatePositions(items: { id: number; positionX: number; positionY: number }[]): Observable<void> {
     return this.#http.put<void>('/api/canvas/nodes/batch', items);
   }
-
-  // ── Edges
 
   createEdge(sourceNodeId: number, targetNodeId: number): Observable<CanvasEdgeModel> {
     return this.#http.post<CanvasEdgeModel>('/api/canvas/edges', { sourceNodeId, targetNodeId });

@@ -1,6 +1,3 @@
-// ── Variabili Globali ────────────────────────────────────────────────────────
-
-// Colori
 $color-primary-green: #1ed760;
 $color-bg-dark: #121212;
 $color-bg-medium: #1a1a1a;
@@ -20,7 +17,6 @@ $color-shadow-medium: rgba(0, 0, 0, 0.6);
 $color-shadow-light: rgba(0, 0, 0, 0.6);
 $color-error: #f44336;
 
-// Spacing
 $spacing-xs: 2px;
 $spacing-sm: 4px;
 $spacing-md: 6px;
@@ -30,28 +26,22 @@ $spacing-xxl: 12px;
 $spacing-xxxl: 16px;
 $spacing-xxxxl: 28px;
 
-// Dimensioni
 $toolbar-height: 52px;
-$sidebar-width: 260px;
+$sidebar-width: 280px;
 $icon-size-sm: 16px;
 $icon-size-md: 18px;
 $icon-size-lg: 20px;
 $icon-size-xl: 34px;
 $icon-size-xxl: 48px;
 
-// Transizioni
 $transition-duration-sm: 0.15s;
 
-// ── Mixin Utili ───────────────────────────────────────────────────────────────
-
-// Mixin per troncare testo su una singola linea con ellissi
 @mixin text-truncate-single-line {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-// Mixin per troncare testo su più linee con ellissi
 @mixin text-truncate-multi-line($lines: 2) {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -60,12 +50,15 @@ $transition-duration-sm: 0.15s;
   -webkit-box-orient: vertical;
 }
 
-// Mixin per bottoni icona quadrati con dimensioni e colori personalizzabili
+// Mixin per bottoni icona
 @mixin square-icon-button($size, $icon-size, $color-normal, $color-disabled) {
   width: $size;
   height: $size;
   line-height: $size;
   flex-shrink: 0;
+  padding: 0;
+  --mdc-icon-button-state-layer-size: #{$size};
+  --mdc-icon-button-icon-size: #{$icon-size};
 
   mat-icon {
     font-size: $icon-size;
@@ -79,7 +72,6 @@ $transition-duration-sm: 0.15s;
   }
 }
 
-// ── Stili Base ───────────────────────────────────────────────────────────────
 
 :host {
   display: flex;
@@ -89,7 +81,6 @@ $transition-duration-sm: 0.15s;
   color: $color-text-light;
 }
 
-// ── Toolbar ──────────────────────────────────────────────────────────────────
 
 .canvas-toolbar {
   display: flex;
@@ -126,7 +117,6 @@ $transition-duration-sm: 0.15s;
   }
 }
 
-// ── Bridge hint bar ──────────────────────────────────────────────────────────
 
 .bridge-hint {
   display: flex;
@@ -141,7 +131,6 @@ $transition-duration-sm: 0.15s;
   flex-shrink: 0;
 }
 
-// ── Layout Principale ────────────────────────────────────────────────────────
 
 .canvas-layout {
   display: flex;
@@ -149,7 +138,6 @@ $transition-duration-sm: 0.15s;
   overflow: hidden;
 }
 
-// ── Sidebar ───────────────────────────────────────────────────────────────────
 
 .canvas-sidebar {
   width: $sidebar-width;
@@ -159,6 +147,7 @@ $transition-duration-sm: 0.15s;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  padding: $spacing-xl;
 
   .sidebar-header {
     display: flex;
@@ -219,17 +208,22 @@ $transition-duration-sm: 0.15s;
     }
 
     &__tracks {
-      padding: 0 $spacing-lg $spacing-lg 28px;
+      padding: 0 $spacing-lg $spacing-lg 20px;
       display: flex;
       flex-direction: column;
       gap: $spacing-xs;
       max-height: 250px;
       overflow-y: auto;
+      overflow-x: hidden;
     }
   }
 
   .sidebar-action-btn--add {
     @include square-icon-button(28px, $icon-size-md, $color-primary-green, $color-text-disabled);
+  }
+
+  .sidebar-action-btn--remove {
+    @include square-icon-button(28px, $icon-size-md, $color-error, $color-text-disabled);
   }
 
   .track-list-item {
@@ -255,6 +249,10 @@ $transition-duration-sm: 0.15s;
 
     &__add {
       @include square-icon-button(24px, $icon-size-sm, $color-primary-green, $color-text-disabled);
+    }
+
+    &__remove {
+      @include square-icon-button(24px, $icon-size-sm, $color-error, $color-text-disabled);
     }
   }
 
@@ -282,7 +280,6 @@ $transition-duration-sm: 0.15s;
   }
 }
 
-// ── Canvas area ───────────────────────────────────────────────────────────────
 
 .canvas-area {
   height: 100vh;
@@ -302,7 +299,6 @@ $transition-duration-sm: 0.15s;
   }
 }
 
-// ── World transform layer ─────────────────────────────────────────────────────
 
 .canvas-world {
   position: absolute;
@@ -312,7 +308,6 @@ $transition-duration-sm: 0.15s;
   will-change: transform;
 }
 
-// ── SVG edge layer (full-size overlay in screen space) ────────────────────────
 
 .edge-layer {
   position: absolute;
@@ -327,7 +322,6 @@ $transition-duration-sm: 0.15s;
   }
 }
 
-// ── Canvas nodes ──────────────────────────────────────────────────────────────
 
 .canvas-node {
   position: absolute;
@@ -411,7 +405,6 @@ $transition-duration-sm: 0.15s;
   cursor: crosshair;
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
 
 .canvas-empty-hint {
   position: absolute;

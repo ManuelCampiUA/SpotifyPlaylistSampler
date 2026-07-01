@@ -82,15 +82,25 @@
                 <span class="playlist-item__name" (click)="togglePlaylistExpand(p)">
                   {{ displayName(p) }}
                 </span>
-                <button
-                  mat-icon-button
-                  class="sidebar-action-btn--add"
-                  (click)="addPlaylistToCanvas(p.spotifyId)"
-                  matTooltip="Aggiungi blocco playlist"
-                  [disabled]="isNodeOnCanvas('playlist:' + p.spotifyId)"
-                >
-                  <mat-icon>add_box</mat-icon>
-                </button>
+                @if (isNodeOnCanvas('playlist:' + p.spotifyId)) {
+                  <button
+                    mat-icon-button
+                    class="sidebar-action-btn--remove"
+                    (click)="removeNodeByReferenceId('playlist:' + p.spotifyId)"
+                    matTooltip="Rimuovi dal canvas"
+                  >
+                    <mat-icon>remove_circle_outline</mat-icon>
+                  </button>
+                } @else {
+                  <button
+                    mat-icon-button
+                    class="sidebar-action-btn--add"
+                    (click)="addPlaylistToCanvas(p.spotifyId)"
+                    matTooltip="Aggiungi blocco playlist"
+                  >
+                    <mat-icon>add_box</mat-icon>
+                  </button>
+                }
               </div>
 
               <!-- Expanded track list -->
@@ -103,15 +113,25 @@
                       <div class="track-list-item">
                         <span class="track-list-item__name">{{ track.name }}</span>
                         <span class="track-list-item__artist">{{ track.artists[0] }}</span>
-                        <button
-                          mat-icon-button
-                          class="track-list-item__add"
-                          (click)="addTrackToCanvas(p.spotifyId, $index)"
-                          matTooltip="Aggiungi al canvas"
-                          [disabled]="isNodeOnCanvas(p.spotifyId + ':' + $index)"
-                        >
-                          <mat-icon>add_circle_outline</mat-icon>
-                        </button>
+                        @if (isNodeOnCanvas(p.spotifyId + ':' + $index)) {
+                          <button
+                            mat-icon-button
+                            class="track-list-item__remove"
+                            (click)="removeNodeByReferenceId(p.spotifyId + ':' + $index)"
+                            matTooltip="Rimuovi dal canvas"
+                          >
+                            <mat-icon>remove_circle</mat-icon>
+                          </button>
+                        } @else {
+                          <button
+                            mat-icon-button
+                            class="track-list-item__add"
+                            (click)="addTrackToCanvas(p.spotifyId, $index)"
+                            matTooltip="Aggiungi al canvas"
+                          >
+                            <mat-icon>add_circle</mat-icon>
+                          </button>
+                        }
                       </div>
                     }
                   }
@@ -145,8 +165,23 @@
         </div>
       }
 
-      <!-- SVG edge overlay (screen-space, above world) -->
+      <!-- SVG edge overlay -->
       <svg class="edge-layer">
+        <defs>
+          @for (edge of screenEdges(); track edge.id) {
+            <linearGradient
+              [attr.id]="'edge-grad-' + edge.id"
+              [attr.x1]="edge.x1"
+              [attr.y1]="edge.y1"
+              [attr.x2]="edge.x2"
+              [attr.y2]="edge.y2"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0%" [attr.stop-color]="edge.sourceColor" />
+              <stop offset="100%" [attr.stop-color]="edge.targetColor" />
+            </linearGradient>
+          }
+        </defs>
         @for (edge of screenEdges(); track edge.id) {
           <line
             [attr.x1]="edge.x1"
@@ -163,7 +198,7 @@
             [attr.y1]="edge.y1"
             [attr.x2]="edge.x2"
             [attr.y2]="edge.y2"
-            stroke="white"
+            [attr.stroke]="'url(#edge-grad-' + edge.id + ')'"
             stroke-width="2"
             style="pointer-events:none"
           />
@@ -172,11 +207,8 @@
 
       <!-- Transformed world layer -->
       <div class="canvas-world" [style.transform]="transformStyle()">
-
-        <!-- Canvas nodes -->
         @for (node of nodes(); track trackById($index, node)) {
           @if (node.nodeType === 'playlist') {
-            <!-- Playlist block -->
             <div
               class="canvas-node canvas-node--playlist"
               [class.bridge-source]="bridgeSource()?.id === node.id"
@@ -195,7 +227,6 @@
               <span class="canvas-node__label">{{ node.label }}</span>
             </div>
           } @else {
-            <!-- Track block -->
             <div
               class="canvas-node canvas-node--track"
               [class.bridge-source]="bridgeSource()?.id === node.id"

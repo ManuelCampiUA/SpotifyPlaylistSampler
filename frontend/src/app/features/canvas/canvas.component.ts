@@ -50,11 +50,9 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
 
   readonly canvasArea = viewChild.required<ElementRef<HTMLDivElement>>('canvasArea');
 
-  // ── Canvas state
   readonly nodes = signal<CanvasNodeModel[]>([]);
   readonly edges = signal<CanvasEdgeModel[]>([]);
 
-  // ── Zoom / Pan
   readonly panX = signal(0);
   readonly panY = signal(0);
   readonly zoom = signal(1);
@@ -68,60 +66,62 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
   private panStartPanX = 0;
   private panStartPanY = 0;
 
-  // ── Drag
   private dragNode: CanvasNodeModel | null = null;
   private dragOffsetX = 0;
   private dragOffsetY = 0;
 
-  // ── Bridge mode
   readonly bridgeMode = signal(false);
   readonly bridgeSource = signal<CanvasNodeModel | null>(null);
   readonly hasUnsavedChanges = signal(false);
 
-  // ── Edge lines in world coords
-  readonly edgeLines = computed(() => {
+  readonly screenEdges = computed(() => {
     const n = this.nodes();
+    const z = this.zoom();
+    const px = this.panX();
+    const py = this.panY();
     const nodeMap = new Map(n.map(node => [node.id, node]));
+
     return this.edges().map(e => {
       const src = nodeMap.get(e.sourceNodeId);
       const tgt = nodeMap.get(e.targetNodeId);
       if (!src || !tgt) return null;
+
+      const srcW = this.getNodeWidth(src);
+      const srcH = this.getNodeHeight(src);
+      const tgtW = this.getNodeWidth(tgt);
+      const tgtH = this.getNodeHeight(tgt);
+
+      const srcCx = src.positionX + srcW / 2;
+      const srcCy = src.positionY + srcH / 2;
+      const tgtCx = tgt.positionX + tgtW / 2;
+      const tgtCy = tgt.positionY + tgtH / 2;
+
+      const p1 = this.getRectEdgePoint(srcCx, srcCy, srcW, srcH, tgtCx, tgtCy);
+      const p2 = this.getRectEdgePoint(tgtCx, tgtCy, tgtW, tgtH, srcCx, srcCy);
+
       return {
         id: e.id,
-        x1: src.positionX + this.getNodeWidth(src) / 2,
-        y1: src.positionY + this.getNodeHeight(src) / 2,
-        x2: tgt.positionX + this.getNodeWidth(tgt) / 2,
-        y2: tgt.positionY + this.getNodeHeight(tgt) / 2,
+        x1: p1.x * z + px,
+        y1: p1.y * z + py,
+        x2: p2.x * z + px,
+        y2: p2.y * z + py,
+        sourceColor: src.color || '#ffffff',
+        targetColor: tgt.color || '#ffffff',
       };
-    }).filter(Boolean) as { id: number; x1: number; y1: number; x2: number; y2: number }[];
-  });
-
-  // ── Edge lines transformed to screen coords (for SVG overlay)
-  readonly screenEdges = computed(() => {
-    const z = this.zoom();
-    const px = this.panX();
-    const py = this.panY();
-    return this.edgeLines().map(e => ({
-      id: e.id,
-      x1: e.x1 * z + px,
-      y1: e.y1 * z + py,
-      x2: e.x2 * z + px,
-      y2: e.y2 * z + py,
-    }));
+    }).filter(Boolean) as {
+      id: number; x1: number; y1: number; x2: number; y2: number;
+      sourceColor: string; targetColor: string;
+    }[];
   });
 
   readonly isLoading = this.canvasService.canvasResource.isLoading;
-
-  // ── Sidebar
   readonly history = this.playlistService.historyResource.value;
   readonly historyLoading = this.playlistService.historyResource.isLoading;
 
-  // ── Expanded playlist in sidebar (shows tracks)
   readonly expandedPlaylistId = signal<string | null>(null);
   readonly expandedPlaylistTracks = signal<Track[]>([]);
   readonly expandedPlaylistLoading = signal(false);
 
-  // Expose constants
   readonly NODE_WIDTH_PLAYLIST = NODE_WIDTH_PLAYLIST;
   readonly NODE_HEIGHT_PLAYLIST = NODE_HEIGHT_PLAYLIST;
   readonly NODE_WIDTH_TRACK = NODE_WIDTH_TRACK;
@@ -147,8 +147,6 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     if (el) el.removeEventListener('wheel', this.onWheel);
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────
-
   getNodeWidth(node: CanvasNodeModel): number {
     return node.nodeType === 'playlist' ? NODE_WIDTH_PLAYLIST : NODE_WIDTH_TRACK;
   }
@@ -157,7 +155,29 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     return node.nodeType === 'playlist' ? NODE_HEIGHT_PLAYLIST : NODE_HEIGHT_TRACK;
   }
 
-  // ── Zoom / Pan ─────────────────────────────────────────────────
+  private getRectEdgePoint(
+    cx: number, cy: number, w: number, h: number,
+    targetX: number, targetY: number
+  ): { x: number; y: number } {
+    const dx = targetX - cx;
+    const dy = targetY - cy;
+
+    if (dx === 0 && dy === 0) return { x: cx, y: cy };
+
+    const halfW = w / 2;
+    const halfH = h / 2;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    let scale: number;
+    if (absDx * halfH > absDy * halfW) {
+      scale = halfW / absDx;
+    } else {
+      scale = halfH / absDy;
+    }
+
+    return { x: cx + dx * scale, y: cy + dy * scale };
+  }
 
   readonly onWheel = (e: WheelEvent): void => {
     e.preventDefault();
@@ -221,8 +241,6 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  // ── Node Drag ──────────────────────────────────────────────────
-
   onNodePointerDown(e: PointerEvent, node: CanvasNodeModel): void {
     if (this.bridgeMode()) return;
     e.stopPropagation();
@@ -237,8 +255,6 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     this.dragOffsetX = worldX - node.positionX;
     this.dragOffsetY = worldY - node.positionY;
   }
-
-  // ── Bridge ─────────────────────────────────────────────────────
 
   toggleBridgeMode(): void {
     this.bridgeMode.update(v => !v);
@@ -279,8 +295,6 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  // ── Remove node ────────────────────────────────────────────────
-
   onNodeRightClick(e: MouseEvent, node: CanvasNodeModel): void {
     e.preventDefault();
     this.canvasService.removeNode(node.id).subscribe({
@@ -294,8 +308,6 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
       error: () => this.snackBar.open('Errore nella rimozione', 'Chiudi', { duration: 3000 }),
     });
   }
-
-  // ── Save ────────────────────────────────────────────────────────
 
   savePositions(): void {
     const items = this.nodes().map(n => ({
@@ -313,8 +325,6 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  // ── Clear all ───────────────────────────────────────────────────
-
   clearCanvas(): void {
     if (!confirm('Sei sicuro? Verranno rimossi tutti i nodi e i collegamenti.')) return;
 
@@ -329,8 +339,6 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  // ── Sidebar: Add playlist block ────────────────────────────────
-
   addPlaylistToCanvas(spotifyId: string): void {
     this.canvasService.addPlaylistNode(spotifyId).subscribe({
       next: (node) => {
@@ -341,8 +349,6 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
         this.snackBar.open(err.error ?? 'Errore', 'Chiudi', { duration: 3000 }),
     });
   }
-
-  // ── Sidebar: Expand/collapse playlist tracks ───────────────────
 
   togglePlaylistExpand(playlist: PlaylistSummary): void {
     if (this.expandedPlaylistId() === playlist.spotifyId) {
@@ -379,6 +385,21 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
 
   isNodeOnCanvas(referenceId: string): boolean {
     return this.nodes().some(n => n.referenceId === referenceId);
+  }
+
+  removeNodeByReferenceId(referenceId: string): void {
+    const node = this.nodes().find(n => n.referenceId === referenceId);
+    if (!node) return;
+    this.canvasService.removeNode(node.id).subscribe({
+      next: () => {
+        this.nodes.update(nodes => nodes.filter(n => n.id !== node.id));
+        this.edges.update(edges => edges.filter(
+          edge => edge.sourceNodeId !== node.id && edge.targetNodeId !== node.id
+        ));
+        this.snackBar.open('Nodo rimosso', '', { duration: 1500 });
+      },
+      error: () => this.snackBar.open('Errore nella rimozione', 'Chiudi', { duration: 3000 }),
+    });
   }
 
   displayName(p: PlaylistSummary): string {

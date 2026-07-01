@@ -1,10 +1,5 @@
 namespace backend.Business.DTOs;
 
-/// <summary>
-/// Full analysis result returned to the frontend.
-/// Property names are serialized as camelCase by ASP.NET Core by default,
-/// matching the Angular model exactly.
-/// </summary>
 public record PlaylistResultDto(
     string PlaylistName,
     string? Description,

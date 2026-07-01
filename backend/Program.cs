@@ -6,20 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Infrastructure: SQLite
 builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ── Infrastructure: Spotify 
 builder.Services.Configure<SpotifyOptions>(builder.Configuration.GetSection(SpotifyOptions.Section));
 builder.Services.AddScoped<ISpotifyService, SpotifyService>();
 
-// ── Domain / Application
 builder.Services.AddScoped<IPlaylistRepository, PlaylistRepository>();
 builder.Services.AddScoped<ICanvasRepository, CanvasRepository>();
 builder.Services.AddScoped<PlaylistAnalyzerService>();
 builder.Services.AddScoped<CanvasService>();
 
-// ── ASP.NET Core
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
@@ -28,7 +24,6 @@ policy.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 
-// ── Auto-apply EF Core migrations on startup
 using (var scope = app.Services.CreateScope())
 {
     AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

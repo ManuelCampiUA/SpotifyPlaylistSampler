@@ -80,8 +80,6 @@ public class CanvasController(CanvasService canvasService) : ControllerBase
         return NoContent();
     }
 
-    // ── Edges ─────────────────────────────────────────────────────
-
     [HttpPost("edges")]
     public async Task<ActionResult<CanvasEdgeDto>> CreateEdge(
         [FromBody] CreateEdgeRequestDto request, CancellationToken ct)

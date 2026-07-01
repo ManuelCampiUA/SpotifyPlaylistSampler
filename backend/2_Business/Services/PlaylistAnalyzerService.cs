@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using backend.Domain;
 using backend.Domain.Interfaces;
 using backend.Business.DTOs;
@@ -8,12 +7,13 @@ namespace backend.Business.Services;
 
 public partial class PlaylistAnalyzerService(ISpotifyService spotifyService, IPlaylistRepository repository)
 {
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
+
     public async Task<PlaylistResultDto> AnalyzeAsync(string url, CancellationToken ct)
     {
         var playlistId = ExtractPlaylistId(url);
         var cached = await repository.GetBySpotifyIdAsync(playlistId, ct);
 
-        TimeSpan CacheTtl = TimeSpan.FromHours(1);
         if (cached is not null && DateTime.UtcNow - cached.AnalyzedAt < CacheTtl)
         {
             return JsonSerializer.Deserialize<PlaylistResultDto>(cached.ResultJson)!;
@@ -34,17 +34,14 @@ public partial class PlaylistAnalyzerService(ISpotifyService spotifyService, IPl
 
     private static string ExtractPlaylistId(string url)
     {
-        Regex spotifyRegex = new(@"open\.spotify\.com/playlist/([A-Za-z0-9]+)");
-        var match = spotifyRegex.Match(url);
-        if (match.Success)
-        {
-            return match.Groups[1].Value;
-        }
-        else
-        {
+        var match = SpotifyUrlRegex().Match(url);
+        if (!match.Success)
             throw new ArgumentException("URL Spotify non valido. Formato atteso: https://open.spotify.com/playlist/{id}");
-        }
+        return match.Groups[1].Value;
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"open\.spotify\.com/playlist/([A-Za-z0-9]+)")]
+    private static partial System.Text.RegularExpressions.Regex SpotifyUrlRegex();
 
     public async Task<List<PlaylistSummaryDto>> GetHistoryAsync(CancellationToken ct)
     {

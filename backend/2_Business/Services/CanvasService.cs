@@ -26,10 +26,8 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         );
     }
 
-    /// <summary>Add a single playlist-type block to the canvas.</summary>
     public async Task<CanvasNodeDto> AddPlaylistAsync(string spotifyId, CancellationToken ct = default)
     {
-        // Idempotency check
         var existing = await canvasRepository.GetNodeByReferenceIdAsync($"playlist:{spotifyId}", ct);
         if (existing is not null) return MapNodeDto(existing);
 
@@ -59,12 +57,10 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         return MapNodeDto(node);
     }
 
-    /// <summary>Add a single track-type block to the canvas.</summary>
     public async Task<CanvasNodeDto> AddTrackAsync(string spotifyId, int trackIndex, CancellationToken ct = default)
     {
         string refId = $"{spotifyId}:{trackIndex}";
 
-        // Idempotency check
         var existing = await canvasRepository.GetNodeByReferenceIdAsync(refId, ct);
         if (existing is not null) return MapNodeDto(existing);
 
@@ -78,7 +74,6 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
 
         var track = result.Tracks[trackIndex];
 
-        // Get color from existing playlist node, or assign new
         var playlistNode = await canvasRepository.GetNodeByReferenceIdAsync($"playlist:{spotifyId}", ct);
         string color = playlistNode?.Color ?? Palette[0];
 
@@ -124,8 +119,6 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         await canvasRepository.ClearAllAsync(ct);
     }
 
-    // ── Edges ──────────────────────────────────────────────────────
-
     public async Task<CanvasEdgeDto> CreateEdgeAsync(int sourceNodeId, int targetNodeId, CancellationToken ct = default)
     {
         var source = await canvasRepository.GetNodeByIdAsync(sourceNodeId, ct)
@@ -149,7 +142,6 @@ public class CanvasService(ICanvasRepository canvasRepository, IPlaylistReposito
         await canvasRepository.RemoveEdgeAsync(edgeId, ct);
     }
 
-    // ── Batch position save ────────────────────────────────────────
 
     public async Task BatchUpdatePositionsAsync(List<UpdateNodePositionBatchItemDto> items, CancellationToken ct = default)
     {

@@ -12,8 +12,6 @@ export class PlaylistService {
   readonly #http = inject(HttpClient);
   readonly #activeRequest = signal<PlaylistRequest | undefined>(undefined);
 
-  // ── Active playlist (analyze / select)
-
   readonly playlistResource = resource<PlaylistResult | undefined, PlaylistRequest | undefined>({
     params: this.#activeRequest,
     loader: ({ params }) => {
@@ -43,8 +41,6 @@ export class PlaylistService {
     this.#activeRequest.set({ type: 'select', id });
   }
 
-  // ── Playlist history / library 
-
   readonly historyResource = resource<PlaylistSummary[], boolean>({
     params: signal<boolean>(true),
     loader: () =>
@@ -52,7 +48,6 @@ export class PlaylistService {
   });
 
   constructor() {
-    // Reload history automatically when an analyze completes successfully
     effect(() => {
       const val = this.playlistResource.value();
       const loading = this.playlistResource.isLoading();
@@ -63,7 +58,6 @@ export class PlaylistService {
     });
   }
 
-  // ── Direct fetch for canvas sidebar
   getPlaylistResult(spotifyId: string): Observable<PlaylistResult> {
     return this.#http.get<PlaylistResult>(`/api/playlist/${spotifyId}`);
   }

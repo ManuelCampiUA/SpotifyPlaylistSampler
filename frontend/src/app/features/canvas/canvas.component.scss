@@ -57,8 +57,6 @@ $transition-duration-sm: 0.15s;
   line-height: $size;
   flex-shrink: 0;
   padding: 0;
-  --mdc-icon-button-state-layer-size: #{$size};
-  --mdc-icon-button-icon-size: #{$icon-size};
 
   mat-icon {
     font-size: $icon-size;

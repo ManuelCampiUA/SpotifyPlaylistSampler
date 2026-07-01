@@ -89,12 +89,12 @@
                     (click)="removeNodeByReferenceId('playlist:' + p.spotifyId)"
                     matTooltip="Rimuovi dal canvas"
                   >
-                    <mat-icon>remove_circle_outline</mat-icon>
+                    <mat-icon>remove_box</mat-icon>
                   </button>
                 } @else {
                   <button
                     mat-icon-button
-                    class="sidebar-action-btn--add"
+                    class="track-list-item__add"
                     (click)="addPlaylistToCanvas(p.spotifyId)"
                     matTooltip="Aggiungi blocco playlist"
                   >

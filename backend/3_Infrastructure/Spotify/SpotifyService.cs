@@ -19,19 +19,50 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
             .OfType<FullTrack>()
             .ToList();
 
-        var artistIds = tracks
-            .SelectMany(t => t.Artists)
-            .Select(a => a.Id)
-            .Where(id => !string.IsNullOrEmpty(id))
-            .Distinct()
-            .ToList();
+        List<string> artistIds = tracks
+                    .SelectMany(t => t.Artists)
+                    .Select(a => a.Id)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct()
+                    .ToList();
 
-        var fullArtists = new List<FullArtist>();
-        foreach (var batch in artistIds.Chunk(10))
+        const int batchSize = 5;
+        const int maxConcurrency = 3;
+        const int delayBetweenBatchesMs = 200; // Delay tra batch per rispettare rate limits
+        SemaphoreSlim semaphore = new(maxConcurrency);
+        List<string[]> batches = [.. artistIds.Chunk(batchSize)];
+        List<FullArtist> fullArtists = [];
+
+        for (int i = 0; i < batches.Count; i++)
         {
-            var tasks = batch.Select(id => client.Artists.Get(id, ct));
-            var results = await Task.WhenAll(tasks);
-            fullArtists.AddRange(results.Where(a => a is not null));
+            var batch = batches[i];
+            var batchTasks = new List<Task<FullArtist?>>();
+
+            foreach (var artistId in batch)
+            {
+                await semaphore.WaitAsync(ct);
+
+                batchTasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        return await FetchArtistWithRetryAsync(client, artistId, ct);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }, ct));
+            }
+
+            var batchResults = await Task.WhenAll(batchTasks);
+            fullArtists.AddRange(batchResults.Where(a => a is not null)!);
+
+            // Aggiungo un delay tra i batch per rispettare i rate limits di Spotify
+            if (i < batches.Count - 1)
+            {
+                await Task.Delay(delayBetweenBatchesMs, ct);
+            }
         }
 
         var allGenres = fullArtists
@@ -55,6 +86,41 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
             Tracks: trackDtos,
             Genres: allGenres
         );
+    }
+
+    private static async Task<FullArtist?> FetchArtistWithRetryAsync(SpotifyClient client, string artistId, CancellationToken ct, int maxRetries = 3)
+    {
+        var retryCount = 0;
+        var baseDelay = 500; // millisecondi
+
+        while (retryCount < maxRetries)
+        {
+            try
+            {
+                return await client.Artists.Get(artistId, ct);
+            }
+            catch (APITooManyRequestsException ex)
+            {
+                // Rate limit hit - aspetto il tempo suggerito da Spotify
+                var retryAfter = ex.RetryAfter;
+                await Task.Delay(retryAfter > TimeSpan.Zero ? retryAfter : TimeSpan.FromSeconds(1), ct);
+                retryCount++;
+            }
+            catch (APIException) when (retryCount < maxRetries - 1)
+            {
+                // Exponential backoff per altri errori API
+                var delay = baseDelay * (int)Math.Pow(2, retryCount);
+                await Task.Delay(delay, ct);
+                retryCount++;
+            }
+            catch
+            {
+                // Per altri errori (network, etc.) ritorno null
+                return null;
+            }
+        }
+
+        return null;
     }
 
     private SpotifyClient BuildClient()

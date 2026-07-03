@@ -1,4 +1,5 @@
 using System.Text;
+using backend.Business.Interfaces;
 using backend.Business.Services;
 using backend.Domain.Interfaces;
 using backend.Infrastructure.Auth;
@@ -19,7 +20,7 @@ builder.Services.Configure<SpotifyOptions>(builder.Configuration.GetSection(Spot
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.Section));
 
 // ── Services ───────────────────────────────────────────
-builder.Services.AddScoped<ISpotifyService, SpotifyService>();
+builder.Services.AddSingleton<ISpotifyService, SpotifyService>();
 builder.Services.AddScoped<IPlaylistRepository, PlaylistRepository>();
 builder.Services.AddScoped<ICanvasRepository, CanvasRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -69,6 +70,13 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
+
+app.UseExceptionHandler(error => error.Run(async context =>
+{
+    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    context.Response.ContentType = "application/json";
+    await context.Response.WriteAsJsonAsync(new { error = "Si è verificato un errore interno." });
+}));
 
 app.UseCors();
 app.UseHttpsRedirection();

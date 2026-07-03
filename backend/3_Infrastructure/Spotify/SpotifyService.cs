@@ -1,5 +1,5 @@
 using backend.Business.DTOs;
-using backend.Domain.Interfaces;
+using backend.Business.Interfaces;
 using Microsoft.Extensions.Options;
 using SpotifyAPI.Web;
 
@@ -7,12 +7,16 @@ namespace backend.Infrastructure.Spotify;
 
 public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
 {
+    private readonly SpotifyClient _client = new(
+        SpotifyClientConfig.CreateDefault()
+            .WithAuthenticator(new ClientCredentialsAuthenticator(
+                options.Value.ClientId,
+                options.Value.ClientSecret)));
+
     public async Task<PlaylistResultDto> FetchPlaylistAsync(string playlistId, CancellationToken ct = default)
     {
-        var client = BuildClient();
-
-        var playlist = await client.Playlists.Get(playlistId, ct);
-        var allItems = await client.PaginateAll(playlist.Items!, cancellationToken: ct);
+        var playlist = await _client.Playlists.Get(playlistId, ct);
+        var allItems = await _client.PaginateAll(playlist.Items!, cancellationToken: ct);
 
         var tracks = allItems
             .Select(item => item.Track)
@@ -46,7 +50,7 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
                 {
                     try
                     {
-                        return await FetchArtistWithRetryAsync(client, artistId, ct);
+                        return await FetchArtistWithRetryAsync(_client, artistId, ct);
                     }
                     finally
                     {
@@ -121,16 +125,5 @@ public class SpotifyService(IOptions<SpotifyOptions> options) : ISpotifyService
         }
 
         return null;
-    }
-
-    private SpotifyClient BuildClient()
-    {
-        var config = SpotifyClientConfig
-            .CreateDefault()
-            .WithAuthenticator(new ClientCredentialsAuthenticator(
-                options.Value.ClientId,
-                options.Value.ClientSecret));
-
-        return new SpotifyClient(config);
     }
 }

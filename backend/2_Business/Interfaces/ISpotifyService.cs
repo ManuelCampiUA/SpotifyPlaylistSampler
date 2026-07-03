@@ -1,9 +1,8 @@
 using backend.Business.DTOs;
 
-namespace backend.Domain.Interfaces;
+namespace backend.Business.Interfaces;
 
 public interface ISpotifyService
 {
-    /// <summary>Fetches playlist data from the Spotify Web API.</summary>
     Task<PlaylistResultDto> FetchPlaylistAsync(string playlistId, CancellationToken ct = default);
 }

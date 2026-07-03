@@ -4,12 +4,8 @@ namespace backend.Domain.Interfaces;
 
 public interface IPlaylistRepository
 {
-    /// <summary>Returns the most recent cached entry for this Spotify playlist ID, or null.</summary>
-    Task<PlaylistCache?> GetBySpotifyIdAsync(string spotifyId, CancellationToken ct = default);
-
-    /// <summary>Persists a new analysis result.</summary>
+    Task<PlaylistCache?> GetBySpotifyIdAsync(string spotifyId, string userId, CancellationToken ct = default);
     Task SaveAsync(PlaylistCache playlist, CancellationToken ct = default);
-
-    /// <summary>Returns the most recent entry for each distinct Spotify playlist ID.</summary>
-    Task<List<PlaylistCache>> GetAllAsync(CancellationToken ct = default);
+    Task<List<PlaylistCache>> GetAllAsync(string userId, CancellationToken ct = default);
+    Task DeleteAsync(string spotifyId, string userId, CancellationToken ct = default);
 }

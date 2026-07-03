@@ -42,4 +42,11 @@ public class PlaylistController(PlaylistAnalyzerService analyzerService) : Contr
             return NotFound();
         return Ok(result);
     }
+
+    [HttpDelete("{spotifyId}")]
+    public async Task<IActionResult> Delete(string spotifyId, CancellationToken ct)
+    {
+        await analyzerService.DeletePlaylistAsync(spotifyId, ct);
+        return NoContent();
+    }
 }

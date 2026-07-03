@@ -6,17 +6,17 @@ namespace backend.Infrastructure.Persistence;
 
 public class CanvasRepository(AppDbContext db) : ICanvasRepository
 {
-    public Task<List<CanvasNode>> GetAllNodesAsync(CancellationToken ct = default)
-        => db.CanvasNodes.AsNoTracking().ToListAsync(ct);
+    public Task<List<CanvasNode>> GetAllNodesAsync(string userId, CancellationToken ct = default)
+        => db.CanvasNodes.Where(n => n.UserSpotifyId == userId).AsNoTracking().ToListAsync(ct);
 
-    public Task<CanvasNode?> GetNodeByIdAsync(int id, CancellationToken ct = default)
-        => db.CanvasNodes.FirstOrDefaultAsync(n => n.Id == id, ct);
+    public Task<CanvasNode?> GetNodeByIdAsync(int id, string userId, CancellationToken ct = default)
+        => db.CanvasNodes.FirstOrDefaultAsync(n => n.Id == id && n.UserSpotifyId == userId, ct);
 
-    public Task<CanvasNode?> GetNodeByReferenceIdAsync(string referenceId, CancellationToken ct = default)
-        => db.CanvasNodes.FirstOrDefaultAsync(n => n.ReferenceId == referenceId, ct);
+    public Task<CanvasNode?> GetNodeByReferenceIdAsync(string referenceId, string userId, CancellationToken ct = default)
+        => db.CanvasNodes.FirstOrDefaultAsync(n => n.ReferenceId == referenceId && n.UserSpotifyId == userId, ct);
 
-    public Task<List<CanvasNode>> GetNodesByIdsAsync(List<int> ids, CancellationToken ct = default)
-        => db.CanvasNodes.Where(n => ids.Contains(n.Id)).ToListAsync(ct);
+    public Task<List<CanvasNode>> GetNodesByIdsAsync(List<int> ids, string userId, CancellationToken ct = default)
+        => db.CanvasNodes.Where(n => ids.Contains(n.Id) && n.UserSpotifyId == userId).ToListAsync(ct);
 
     public async Task AddNodeAsync(CanvasNode node, CancellationToken ct = default)
     {
@@ -42,9 +42,9 @@ public class CanvasRepository(AppDbContext db) : ICanvasRepository
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task RemoveNodeAsync(int nodeId, CancellationToken ct = default)
+    public async Task RemoveNodeAsync(int nodeId, string userId, CancellationToken ct = default)
     {
-        var node = await db.CanvasNodes.FindAsync([nodeId], ct);
+        var node = await db.CanvasNodes.FirstOrDefaultAsync(n => n.Id == nodeId && n.UserSpotifyId == userId, ct);
         if (node is not null)
         {
             db.CanvasNodes.Remove(node);
@@ -52,25 +52,31 @@ public class CanvasRepository(AppDbContext db) : ICanvasRepository
         }
     }
 
-    public async Task RemovePlaylistNodesAsync(string playlistSpotifyId, CancellationToken ct = default)
+    public async Task RemovePlaylistNodesAsync(string playlistSpotifyId, string userId, CancellationToken ct = default)
     {
         var nodes = await db.CanvasNodes
-            .Where(n => n.ParentPlaylistId == playlistSpotifyId)
+            .Where(n => n.ParentPlaylistId == playlistSpotifyId && n.UserSpotifyId == userId)
             .ToListAsync(ct);
-
         db.CanvasNodes.RemoveRange(nodes);
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task ClearAllAsync(CancellationToken ct = default)
+    public async Task ClearAllAsync(string userId, CancellationToken ct = default)
     {
-        db.CanvasEdges.RemoveRange(db.CanvasEdges);
-        db.CanvasNodes.RemoveRange(db.CanvasNodes);
+        var userEdges = await db.CanvasEdges
+            .Where(e => e.SourceNode.UserSpotifyId == userId)
+            .ToListAsync(ct);
+        db.CanvasEdges.RemoveRange(userEdges);
+
+        var userNodes = await db.CanvasNodes
+            .Where(n => n.UserSpotifyId == userId)
+            .ToListAsync(ct);
+        db.CanvasNodes.RemoveRange(userNodes);
         await db.SaveChangesAsync(ct);
     }
 
-    public Task<List<CanvasEdge>> GetAllEdgesAsync(CancellationToken ct = default)
-        => db.CanvasEdges.AsNoTracking().ToListAsync(ct);
+    public Task<List<CanvasEdge>> GetAllEdgesAsync(string userId, CancellationToken ct = default)
+        => db.CanvasEdges.Where(e => e.SourceNode.UserSpotifyId == userId).AsNoTracking().ToListAsync(ct);
 
     public async Task AddEdgeAsync(CanvasEdge edge, CancellationToken ct = default)
     {
@@ -78,9 +84,11 @@ public class CanvasRepository(AppDbContext db) : ICanvasRepository
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task RemoveEdgeAsync(int edgeId, CancellationToken ct = default)
+    public async Task RemoveEdgeAsync(int edgeId, string userId, CancellationToken ct = default)
     {
-        var edge = await db.CanvasEdges.FindAsync([edgeId], ct);
+        var edge = await db.CanvasEdges
+            .Include(e => e.SourceNode)
+            .FirstOrDefaultAsync(e => e.Id == edgeId && e.SourceNode.UserSpotifyId == userId, ct);
         if (edge is not null)
         {
             db.CanvasEdges.Remove(edge);

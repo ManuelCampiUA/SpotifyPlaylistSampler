@@ -3,6 +3,7 @@ namespace backend.Domain;
 public class CanvasNode
 {
     public int Id { get; set; }
+    public string UserSpotifyId { get; set; } = default!;
     public string NodeType { get; set; } = default!;
 
     public string ReferenceId { get; set; } = default!;

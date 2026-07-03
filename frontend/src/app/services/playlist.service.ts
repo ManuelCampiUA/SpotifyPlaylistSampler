@@ -62,4 +62,8 @@ export class PlaylistService {
   getPlaylistResult(spotifyId: string): Observable<PlaylistResult> {
     return this.#http.get<PlaylistResult>(`${environment.apiUrl}/api/playlist/${spotifyId}`);
   }
+
+  deletePlaylist(spotifyId: string): Observable<void> {
+    return this.#http.delete<void>(`${environment.apiUrl}/api/playlist/${spotifyId}`);
+  }
 }

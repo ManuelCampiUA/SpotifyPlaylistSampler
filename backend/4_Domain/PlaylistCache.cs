@@ -11,6 +11,8 @@ public class PlaylistCache
 
     public string SpotifyId { get; set; } = default!;
 
+    public string UserSpotifyId { get; set; } = default!;
+
     public string Name { get; set; } = default!;
 
     public DateTime AnalyzedAt { get; set; }

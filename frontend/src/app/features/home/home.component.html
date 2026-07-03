@@ -51,6 +51,14 @@
                 <span class="library-item-name">{{ item.playlistName }}</span>
                 <span class="library-item-tracks">{{ item.totalTracks }} brani</span>
               </div>
+              <button
+                mat-icon-button
+                class="library-delete"
+                (click)="deletePlaylist($event, item.spotifyId)"
+                matTooltip="Rimuovi dalla libreria"
+              >
+                <mat-icon>delete_outline</mat-icon>
+              </button>
             </li>
           }
         </ul>

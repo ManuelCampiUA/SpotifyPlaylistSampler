@@ -24,6 +24,8 @@ builder.Services.AddSingleton<ISpotifyService, SpotifyService>();
 builder.Services.AddScoped<IPlaylistRepository, PlaylistRepository>();
 builder.Services.AddScoped<ICanvasRepository, CanvasRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<PlaylistAnalyzerService>();
 builder.Services.AddScoped<CanvasService>();
 builder.Services.AddScoped<AuthService>();

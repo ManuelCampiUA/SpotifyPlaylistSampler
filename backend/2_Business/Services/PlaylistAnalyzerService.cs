@@ -6,14 +6,16 @@ using backend.Business.Interfaces;
 
 namespace backend.Business.Services;
 
-public partial class PlaylistAnalyzerService(ISpotifyService spotifyService, IPlaylistRepository repository)
+public partial class PlaylistAnalyzerService(
+    ISpotifyService spotifyService, IPlaylistRepository repository, ICurrentUser currentUser)
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
 
     public async Task<PlaylistResultDto> AnalyzeAsync(string url, CancellationToken ct)
     {
+        var userId = currentUser.SpotifyId;
         var playlistId = ExtractPlaylistId(url);
-        var cached = await repository.GetBySpotifyIdAsync(playlistId, ct);
+        var cached = await repository.GetBySpotifyIdAsync(playlistId, userId, ct);
 
         if (cached is not null && DateTime.UtcNow - cached.AnalyzedAt < CacheTtl)
         {
@@ -25,6 +27,7 @@ public partial class PlaylistAnalyzerService(ISpotifyService spotifyService, IPl
         await repository.SaveAsync(new PlaylistCache
         {
             SpotifyId = playlistId,
+            UserSpotifyId = userId,
             Name = result.PlaylistName,
             AnalyzedAt = DateTime.UtcNow,
             ResultJson = JsonSerializer.Serialize(result)
@@ -46,7 +49,7 @@ public partial class PlaylistAnalyzerService(ISpotifyService spotifyService, IPl
 
     public async Task<List<PlaylistSummaryDto>> GetHistoryAsync(CancellationToken ct)
     {
-        var all = await repository.GetAllAsync(ct);
+        var all = await repository.GetAllAsync(currentUser.SpotifyId, ct);
         return all.Select(p =>
         {
             var result = JsonSerializer.Deserialize<PlaylistResultDto>(p.ResultJson);
@@ -61,8 +64,13 @@ public partial class PlaylistAnalyzerService(ISpotifyService spotifyService, IPl
 
     public async Task<PlaylistResultDto?> GetPlaylistAsync(string spotifyId, CancellationToken ct)
     {
-        var cached = await repository.GetBySpotifyIdAsync(spotifyId, ct);
+        var cached = await repository.GetBySpotifyIdAsync(spotifyId, currentUser.SpotifyId, ct);
         if (cached is null) return null;
         return JsonSerializer.Deserialize<PlaylistResultDto>(cached.ResultJson);
+    }
+
+    public async Task DeletePlaylistAsync(string spotifyId, CancellationToken ct)
+    {
+        await repository.DeleteAsync(spotifyId, currentUser.SpotifyId, ct);
     }
 }

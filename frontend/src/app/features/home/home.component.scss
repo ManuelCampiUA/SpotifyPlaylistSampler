@@ -448,6 +448,27 @@
   }
 }
 
+.library-delete {
+  opacity: 0;
+  transition: opacity 0.15s;
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  padding: 0 !important;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #616161;
+  }
+
+  &:hover mat-icon { color: #ef5350; }
+}
+
+.library-item:hover .library-delete { opacity: 1; }
+
 .library-item-text {
   display: flex;
   flex-direction: column;

@@ -87,6 +87,18 @@ export class HomeComponent {
     this.playlistService.historyResource.reload();
   }
 
+  deletePlaylist(event: Event, spotifyId: string): void {
+    event.stopPropagation();
+    this.playlistService.deletePlaylist(spotifyId).subscribe({
+      next: () => {
+        if (this.selectedPlaylistId() === spotifyId) {
+          this.selectedPlaylistId.set(undefined);
+        }
+        this.playlistService.historyResource.reload();
+      },
+    });
+  }
+
   formatDuration(ms: number): string {
     const min = Math.floor(ms / 60000);
     const sec = Math.floor((ms % 60000) / 1000);

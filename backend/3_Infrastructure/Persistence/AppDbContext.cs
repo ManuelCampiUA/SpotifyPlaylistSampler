@@ -15,8 +15,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<PlaylistCache>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.SpotifyId);
+            entity.HasIndex(e => new { e.SpotifyId, e.UserSpotifyId });
             entity.Property(e => e.SpotifyId).IsRequired();
+            entity.Property(e => e.UserSpotifyId).IsRequired();
             entity.Property(e => e.Name).IsRequired();
             entity.Property(e => e.ResultJson).IsRequired();
         });
@@ -24,7 +25,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<CanvasNode>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.ReferenceId).IsUnique();
+            entity.HasIndex(e => new { e.ReferenceId, e.UserSpotifyId }).IsUnique();
+            entity.Property(e => e.UserSpotifyId).IsRequired();
             entity.Property(e => e.NodeType).IsRequired();
             entity.Property(e => e.ReferenceId).IsRequired();
             entity.Property(e => e.Label).IsRequired();

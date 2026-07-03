@@ -1,29 +1,66 @@
+using System.Text;
 using backend.Business.Services;
 using backend.Domain.Interfaces;
+using backend.Infrastructure.Auth;
 using backend.Infrastructure.Persistence;
 using backend.Infrastructure.Spotify;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+// ── Database ───────────────────────────────────────────
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// ── Options ────────────────────────────────────────────
 builder.Services.Configure<SpotifyOptions>(builder.Configuration.GetSection(SpotifyOptions.Section));
-builder.Services.AddScoped<ISpotifyService, SpotifyService>();
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.Section));
 
+// ── Services ───────────────────────────────────────────
+builder.Services.AddScoped<ISpotifyService, SpotifyService>();
 builder.Services.AddScoped<IPlaylistRepository, PlaylistRepository>();
 builder.Services.AddScoped<ICanvasRepository, CanvasRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<PlaylistAnalyzerService>();
 builder.Services.AddScoped<CanvasService>();
+builder.Services.AddScoped<AuthService>();
 
+// ── Authentication ─────────────────────────────────────
+var jwtSection = builder.Configuration.GetSection("Jwt");
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSection["Issuer"],
+            ValidAudience = jwtSection["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSection["Secret"]!))
+        };
+    });
+builder.Services.AddAuthorization();
+
+// ── Controllers & OpenAPI ──────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// ── CORS ───────────────────────────────────────────────
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(policy =>
-policy.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod()));
+    policy.WithOrigins(corsOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()));
 
 var app = builder.Build();
 
+// ── Auto-migrate ───────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
     AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -35,6 +72,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

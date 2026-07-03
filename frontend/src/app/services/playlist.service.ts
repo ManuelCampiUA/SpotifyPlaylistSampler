@@ -2,6 +2,7 @@ import { Injectable, inject, signal, resource, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Observable } from 'rxjs';
 import { PlaylistResult, PlaylistSummary } from '../models/playlist.model';
+import { environment } from '../../environments/environment';
 
 type PlaylistRequest =
   | { type: 'analyze'; url: string }
@@ -18,11 +19,11 @@ export class PlaylistService {
       if (!params) return Promise.resolve(undefined);
       if (params.type === 'analyze') {
         return firstValueFrom(
-          this.#http.post<PlaylistResult>('/api/playlist/analyze', { url: params.url }),
+          this.#http.post<PlaylistResult>(`${environment.apiUrl}/api/playlist/analyze`, { url: params.url }),
         );
       }
       return firstValueFrom(
-        this.#http.get<PlaylistResult>(`/api/playlist/${params.id}`),
+        this.#http.get<PlaylistResult>(`${environment.apiUrl}/api/playlist/${params.id}`),
       );
     },
   });
@@ -44,7 +45,7 @@ export class PlaylistService {
   readonly historyResource = resource<PlaylistSummary[], boolean>({
     params: signal<boolean>(true),
     loader: () =>
-      firstValueFrom(this.#http.get<PlaylistSummary[]>('/api/playlist/history')),
+      firstValueFrom(this.#http.get<PlaylistSummary[]>(`${environment.apiUrl}/api/playlist/history`)),
   });
 
   constructor() {
@@ -59,6 +60,6 @@ export class PlaylistService {
   }
 
   getPlaylistResult(spotifyId: string): Observable<PlaylistResult> {
-    return this.#http.get<PlaylistResult>(`/api/playlist/${spotifyId}`);
+    return this.#http.get<PlaylistResult>(`${environment.apiUrl}/api/playlist/${spotifyId}`);
   }
 }

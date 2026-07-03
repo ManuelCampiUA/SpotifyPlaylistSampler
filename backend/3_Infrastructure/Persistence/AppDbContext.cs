@@ -8,6 +8,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PlaylistCache> Playlists => Set<PlaylistCache>();
     public DbSet<CanvasNode> CanvasNodes => Set<CanvasNode>();
     public DbSet<CanvasEdge> CanvasEdges => Set<CanvasEdge>();
+    public DbSet<AppUser> Users => Set<AppUser>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +44,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(e => e.TargetNodeId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.SpotifyId).IsUnique();
+            entity.Property(e => e.SpotifyId).IsRequired();
+            entity.Property(e => e.DisplayName).IsRequired();
+            entity.Property(e => e.AccessToken).IsRequired();
+            entity.Property(e => e.RefreshToken).IsRequired();
         });
     }
 }

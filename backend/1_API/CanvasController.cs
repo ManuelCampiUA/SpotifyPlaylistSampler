@@ -1,9 +1,11 @@
 using backend.Business.DTOs;
 using backend.Business.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.API;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class CanvasController(CanvasService canvasService) : ControllerBase

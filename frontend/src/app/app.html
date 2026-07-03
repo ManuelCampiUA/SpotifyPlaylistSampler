@@ -1,1 +1,19 @@
+@if (authService.isAuthenticated()) {
+  <div class="user-pill">
+    @if (authService.currentUser()?.imageUrl) {
+      <img [src]="authService.currentUser()!.imageUrl" class="user-pill__avatar" alt="" />
+    } @else {
+      <mat-icon class="user-pill__icon">account_circle</mat-icon>
+    }
+    <span class="user-pill__name">{{ authService.currentUser()?.displayName }}</span>
+    <button
+      mat-icon-button
+      class="user-pill__logout"
+      (click)="authService.logout()"
+      matTooltip="Esci"
+    >
+      <mat-icon>logout</mat-icon>
+    </button>
+  </div>
+}
 <router-outlet />

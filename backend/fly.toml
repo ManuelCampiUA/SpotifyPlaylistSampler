@@ -1,0 +1,26 @@
+# Fly.io configuration for SpotifyPlaylistSampler backend
+# Deploy: fly launch → fly volumes create data --region cdg --size 1 → fly deploy
+
+app = "spotify-playlist-sampler"
+primary_region = "cdg"
+
+[build]
+
+[env]
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ConnectionStrings__DefaultConnection = "Data Source=/data/spotify_sampler.db"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[mounts]
+  source = "data"
+  destination = "/data"
